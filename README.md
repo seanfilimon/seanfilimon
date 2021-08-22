@@ -14,8 +14,6 @@ at s.filimon@opticengine.net(Business Inquiries)
 or
 seanfilimon@icloud.com(Personal/Freelance)
 
-If you would like to schedule a meeting please message me here on LinkedIn or by OpticEngine's Google Voice: ‪(813) 358-8082‬ (Ask for Sean)
-
 ### ⚙️ &nbsp;GitHub Analytics
 
 <p align="center">
