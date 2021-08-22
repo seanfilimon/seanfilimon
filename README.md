@@ -1,4 +1,4 @@
-<img alt="Night Coding" width='40' align="left"/><h2>Hey my name is Sean Filimon</h2>
+<h2>Hey my name is Sean Filimon</h2>
 
 ### 👨🏻‍💻 &nbsp;About Me
 
