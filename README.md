@@ -2,13 +2,19 @@
 
 ### 👨🏻‍💻 &nbsp;About Me
 
-💡 &nbsp;I like to explore new technologies and develop software solutions and quick hacks.\
-🎓 &nbsp;I'm currently studying Computer Science and Mathematics at the University of Massachusetts Amherst.\
-🌱 &nbsp;I'm on track for learning more about Artificial Intelligence, Systems Design, and Cloud Architecture.\
-✍️ &nbsp;In my free time, I pursue Graphic Design and Blog Writing as hobbies/side hustles.\
-💬 &nbsp;Feel free to reach out to me for pro bono consulting and volunteering, or just for some interesting discussion.\
-✉️ &nbsp;You can shoot me an email at avsingh@umass.edu! I'll try to respond as soon as I can.\
-📄 &nbsp;Please have a look at my [Résumé](https://www.adityavsingh.com/resume.html) for more details about me. I'm open to feedback and suggestions!
+I am an ambitious entrepreneur looking to expand my business into several industries, such as digital marketing, computer software, and B2B services. In terms of professional work, I have been programming for about three years, and in terms of personal work, I have been doing it for seven years. Those looking for a partner in business can also contact me for freelance business development or software development commissions.
+
+In my role as a member of the Computer Science/Cybersecurity Industry, I am committed to helping everyone with personal development and to creating new opportunities for those who wish to enter the field. I would be glad to assist you with any project or answer any Full-Stack Developer questions.
+
+In addition, I provide Free Consulting in regards to any Networking / Software-related issues or tasks. 
+Whether it is B2B (OpticEngine) or B2C (Personal), I can provide you with services such as Software Development and Graphics Design, as well as Digital Marketing services.
+
+Feel free to contact me by email
+at s.filimon@opticengine.net(Business Inquiries)
+or
+seanfilimon@icloud.com(Personal/Freelance)
+
+If you would like to schedule a meeting please message me here on LinkedIn or by OpticEngine's Google Voice: ‪(813) 358-8082‬ (Ask for Sean)
 
 ### ⚙️ &nbsp;GitHub Analytics
 
