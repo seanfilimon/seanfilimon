@@ -9,11 +9,6 @@ In my role as a member of the Computer Science/Cybersecurity Industry, I am comm
 In addition, I provide Free Consulting in regards to any Networking / Software-related issues or tasks. 
 Whether it is B2B (OpticEngine) or B2C (Personal), I can provide you with services such as Software Development and Graphics Design, as well as Digital Marketing services.
 
-Feel free to contact me by email
-at s.filimon@opticengine.net(Business Inquiries)
-or
-seanfilimon@icloud.com(Personal/Freelance)
-
 ### ⚙️ &nbsp;GitHub Analytics
 
 <p align="center">
