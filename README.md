@@ -2,13 +2,10 @@
 
 ### 👨🏻‍💻 &nbsp;About Me
 
-I am an ambitious entrepreneur looking to expand my business into several industries, such as digital marketing, computer software, and B2B services. In terms of professional work, I have been programming for about three years, and in terms of personal work, I have been doing it for seven years. Those looking for a partner in business can also contact me for freelance business development or software development commissions.
+LegionEdge enables organizations to design, prototype and deploy applications efficiently through its intuitive platform. As Founder & CEO, the focus is on empowering developers, designers and founders to safely prototype full-stack applications with nothing but AI Prompts.
 
-In my role as a member of the Computer Science/Cybersecurity Industry, I am committed to helping everyone with personal development and to creating new opportunities for those who wish to enter the field. I would be glad to assist you with any project or answer any Full-Stack Developer questions.
 
-In addition, I provide Free Consulting in regards to any Networking / Software-related issues or tasks. 
-Whether it is B2B (OpticEngine) or B2C (Personal), I can provide you with services such as Software Development and Graphics Design, as well as Digital Marketing services.
-
+Previously, contributed as a Software Engineer for over six years, honing project management, strategic planning, and research skills. Certified in Network Technology and Internet Business, with a strong commitment to innovative technology solutions.
 ### ⚙️ &nbsp;GitHub Analytics
 
 <p align="center">
