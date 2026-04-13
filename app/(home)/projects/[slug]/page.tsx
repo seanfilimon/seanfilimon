@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import { projects, blog, articles, guides } from "@/lib/source";
 import { TOCProvider, TOCScrollArea } from "fumadocs-ui/components/toc";
-import { TOCItems } from "fumadocs-ui/components/toc/default";
+import { ContentTOC } from "@/components/content-toc";
 import { ProjectBanner } from "@/components/project-banner";
 
 export function generateStaticParams() {
@@ -228,7 +228,7 @@ export default async function ProjectPage({
                 On this page
               </h3>
               <TOCScrollArea className="flex max-h-[calc(100vh-8rem)] flex-col">
-                <TOCItems />
+                <ContentTOC />
               </TOCScrollArea>
             </aside>
           </div>

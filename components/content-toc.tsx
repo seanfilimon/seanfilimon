@@ -1,9 +1,9 @@
-"use client";
+"use client"
 
 import { useTOCItems } from "fumadocs-ui/components/toc";
 import { TOCItems, TOCItem } from "fumadocs-ui/components/toc/default";
 
-export function BlogTOC() {
+export function ContentTOC() {
   const items = useTOCItems();
 
   return (

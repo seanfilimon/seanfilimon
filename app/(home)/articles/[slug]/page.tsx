@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import { articles } from "@/lib/source";
 import { siteUrl } from "@/lib/metadata";
 import { TOCProvider, TOCScrollArea } from "fumadocs-ui/components/toc";
-import { TOCItems } from "fumadocs-ui/components/toc/default";
+import { ContentTOC } from "@/components/content-toc";
 
 export default async function ArticlePage(props: {
   params: Promise<{ slug: string }>;
@@ -88,7 +88,7 @@ export default async function ArticlePage(props: {
               On this page
             </h3>
             <TOCScrollArea className="flex max-h-[calc(100vh-8rem)] flex-col">
-              <TOCItems />
+              <ContentTOC />
             </TOCScrollArea>
           </aside>
         </div>
