@@ -109,7 +109,7 @@ export async function generateMetadata(props: {
       type: "article",
       url: `${siteUrl}${page.url}`,
       images: `/og${page.url}/image.png`,
-      publishedTime: page.data.date,
+      publishedTime: String(page.data.date),
       authors: [page.data.author],
     },
     alternates: {

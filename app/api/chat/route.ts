@@ -3,8 +3,8 @@ import { streamText, convertToModelMessages, type UIMessage } from "ai";
 import { blog, guides, articles, resources, events } from "@/lib/source";
 
 function getAllContent() {
-  const serialize = (
-    pages: { url: string; data: Record<string, unknown> }[],
+  const serialize = <T extends { url: string; data: { title: unknown; description?: unknown; tags?: unknown } }>(
+    pages: T[],
     type: string,
   ) =>
     pages.map((p) => ({

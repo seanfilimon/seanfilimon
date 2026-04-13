@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import { blog } from "@/lib/source";
 import { siteUrl } from "@/lib/metadata";
 import { TOCProvider, TOCScrollArea } from "fumadocs-ui/components/toc";
-import { TOCItems } from "fumadocs-ui/components/toc/default";
+import { BlogTOC } from "./toc";
 
 export default async function BlogPost(props: {
   params: Promise<{ slug: string }>;
@@ -88,7 +88,7 @@ export default async function BlogPost(props: {
               On this page
             </h3>
             <TOCScrollArea className="flex max-h-[calc(100vh-8rem)] flex-col">
-              <TOCItems />
+              <BlogTOC />
             </TOCScrollArea>
           </aside>
         </div>
@@ -119,7 +119,7 @@ export async function generateMetadata(props: {
       type: "article",
       url: `${siteUrl}${page.url}`,
       images: page.data.thumbnail ?? `/og${page.url}/image.png`,
-      publishedTime: page.data.date,
+      publishedTime: String(page.data.date),
       authors: [page.data.author],
     },
     alternates: {

@@ -48,7 +48,7 @@ export default async function ProjectPage({
         description: post.data.description,
       };
     })
-    .filter(Boolean);
+    .filter((x): x is NonNullable<typeof x> => x !== null);
 
   const linkedArticles = ((page.data.articles as string[]) || [])
     .map((articleSlug: string) => {
@@ -60,7 +60,7 @@ export default async function ProjectPage({
         description: article.data.description,
       };
     })
-    .filter(Boolean);
+    .filter((x): x is NonNullable<typeof x> => x !== null);
 
   const linkedGuides = ((page.data.guides as string[]) || [])
     .map((guideSlug: string) => {
@@ -72,7 +72,7 @@ export default async function ProjectPage({
         description: guide.data.description,
       };
     })
-    .filter(Boolean);
+    .filter((x): x is NonNullable<typeof x> => x !== null);
 
   return (
     <TOCProvider toc={page.data.toc}>

@@ -15,19 +15,19 @@ function getResourceMap(): Map<string, ResourceInfo> {
   return resourceMap;
 }
 
-function serialize(
-  pages: { url: string; data: Record<string, unknown> }[],
+function serialize<T extends { url: string; data: { title: unknown; date: unknown; description?: unknown; thumbnail?: unknown; icon?: unknown; tags?: unknown; difficulty?: unknown; category?: unknown; location?: unknown; eventDate?: unknown; resource?: unknown } }>(
+  pages: T[],
   type: string,
   resourceMap?: Map<string, ResourceInfo>,
 ): ContentItem[] {
   return pages
     .sort(
       (a, b) =>
-        new Date(b.data.date as string).getTime() -
-        new Date(a.data.date as string).getTime(),
+        new Date(String(b.data.date)).getTime() -
+        new Date(String(a.data.date)).getTime(),
     )
     .map((p) => {
-      const resourceSlug = p.data.resource as string | undefined;
+      const resourceSlug = (p.data as Record<string, unknown>).resource as string | undefined;
       const linkedResource = resourceSlug && resourceMap ? resourceMap.get(resourceSlug) : undefined;
       
       return {

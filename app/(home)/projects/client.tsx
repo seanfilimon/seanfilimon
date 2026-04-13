@@ -28,7 +28,7 @@ const blurScale = {
   visible: { opacity: 1, filter: "blur(0px)", scale: 1 },
 };
 
-const smoothTransition = { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] };
+const smoothTransition = { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] as const };
 
 interface ContentItem {
   url: string;

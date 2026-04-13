@@ -32,9 +32,9 @@ const stagger = {
 
 const smoothTransition = { duration: 0.6, ease };
 
-function useReveal(margin = "-80px") {
+function useReveal(margin: string = "-80px") {
   const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin });
+  const isInView = useInView(ref, { once: true, margin: margin as `${number}px` });
   return { ref, isInView };
 }
 
@@ -295,7 +295,7 @@ function ProjectCard({
   project: ExperienceProject;
   featured?: boolean;
 }) {
-  const Wrapper = project.url ? Link : "div";
+  const Wrapper: React.ElementType = project.url ? Link : "div";
   const wrapperProps = project.url ? { href: project.url } : {};
 
   return (
