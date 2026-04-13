@@ -17,6 +17,9 @@ export const metadata: Metadata = {
     template: `%s | ${siteName}`,
   },
   description: siteDescription,
+  keywords: "Sean Filimon, Sean F, developer tools, distributed systems, AI, LegionEdge, Nokuva, Foltrac, Tavoc, W0rktree, version control, design editor, deployment platform, IDE, software engineering, entrepreneur, product engineer",
+  authors: [{ name: "Sean Filimon", url: siteUrl }],
+  creator: "Sean Filimon",
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -36,6 +39,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     creator: "@SeanFilimon",
+    site: "@SeanFilimon",
   },
   robots: {
     index: true,

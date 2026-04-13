@@ -5,6 +5,7 @@ import { IoLogoYoutube, IoPlayOutline } from "react-icons/io5";
 export const metadata: Metadata = {
   title: "Videos",
   description: "Watch videos from Sean Filimon on YouTube covering developer tools, coding tutorials, and tech insights.",
+  keywords: "Sean Filimon, Sean F, videos, YouTube, tutorials, coding, developer tools, tech, education",
 };
 
 const YOUTUBE_CHANNEL = "https://youtube.com/@SeanFilimon";

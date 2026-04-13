@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Autobiography",
   description:
     "The story of Sean Filimon — from writing his first line of JavaScript at 13 to founding multiple developer tool companies by 20.",
+  keywords: "Sean Filimon, Sean F, autobiography, biography, founder, developer, coding journey, entrepreneurship, timeline",
 };
 
 export default function AutobiographyPage() {

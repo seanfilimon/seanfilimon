@@ -4,6 +4,7 @@ import { IoMailOutline, IoBusinessOutline, IoNewspaperOutline, IoCheckmarkCircle
 export const metadata: Metadata = {
   title: "Contact",
   description: "Get in touch with Sean Filimon for official business inquiries, media requests, and partnership opportunities.",
+  keywords: "Sean Filimon, Sean F, contact, business inquiry, partnership, media, speaking, investment, collaboration",
 };
 
 const ACCEPTED_INQUIRIES = [

@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "My Story",
   description:
     "How Sean Filimon went from writing his first lines of code at 13 to founding multiple developer tool companies by 20.",
+  keywords: "Sean Filimon, Sean F, story, journey, founder, developer, coding, entrepreneurship, timeline",
 };
 
 export default function StoryPage() {

@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "About",
   description:
     "Sean Filimon is a 20-year-old product engineer and entrepreneur building developer tools, distributed systems, and AI-powered platforms.",
+  keywords: "Sean Filimon, Sean F, about, product engineer, entrepreneur, developer tools, distributed systems, AI, LegionEdge, Nokuva, Foltrac, Tavoc, W0rktree",
 };
 
 type AboutData = {

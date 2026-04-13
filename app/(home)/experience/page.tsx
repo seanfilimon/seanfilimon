@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   title: "Experience",
   description:
     "Companies and projects Sean Filimon has founded, built, and contributed to.",
+  keywords: "Sean Filimon, Sean F, experience, work history, founder, CEO, LegionEdge, Nokuva, Foltrac, Tavoc, W0rktree, developer tools, distributed systems",
 };
 
 export default function ExperiencePage() {

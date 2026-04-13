@@ -12,6 +12,7 @@ import {
 export const metadata: Metadata = {
   title: "Follow Me",
   description: "Connect with Sean Filimon on social media and stay updated on the latest projects and content.",
+  keywords: "Sean Filimon, Sean F, social media, GitHub, LinkedIn, Twitter, YouTube, TikTok, Instagram, follow",
 };
 
 const SOCIALS = [

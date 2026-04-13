@@ -4,6 +4,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import { projects, blog, articles, guides } from "@/lib/source";
+import { siteUrl } from "@/lib/metadata";
 import { TOCProvider, TOCScrollArea } from "fumadocs-ui/components/toc";
 import { ContentTOC } from "@/components/content-toc";
 import { ProjectBanner } from "@/components/project-banner";
@@ -20,9 +21,24 @@ export async function generateMetadata({
   const { slug } = await params;
   const page = projects.getPage([slug]);
   if (!page) return {};
+  
+  const tags = (page.data.tags as string[]) || [];
+  const keywords = ["Sean Filimon", "Sean F", page.data.title, ...tags, "project", "developer tools"].join(", ");
+  
   return {
     title: page.data.title,
     description: page.data.tagline,
+    keywords,
+    openGraph: {
+      title: page.data.title,
+      description: page.data.tagline,
+      type: "website",
+      url: `${siteUrl}/projects/${slug}`,
+      images: page.data.logo ? [{ url: page.data.logo, width: 200, height: 200 }] : [],
+    },
+    alternates: {
+      canonical: `${siteUrl}/projects/${slug}`,
+    },
   };
 }
 

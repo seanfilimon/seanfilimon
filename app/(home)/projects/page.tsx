@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Projects",
   description:
     "Companies and open source projects Sean Filimon has founded and built.",
+  keywords: "Sean Filimon, Sean F, projects, LegionEdge, Nokuva, Foltrac, Tavoc, W0rktree, open source, developer tools, version control, design editor, deployment",
 };
 
 export interface ContentItem {

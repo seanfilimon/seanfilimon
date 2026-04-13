@@ -110,9 +110,13 @@ export async function generateMetadata(props: {
   const page = articles.getPage([params.slug]);
   if (!page) notFound();
 
+  const tags = (page.data.tags as string[]) || [];
+  const keywords = ["Sean Filimon", "Sean F", page.data.title, ...tags, "article", "engineering"].join(", ");
+
   return {
     title: page.data.title,
     description: page.data.description,
+    keywords,
     openGraph: {
       title: page.data.title,
       description: page.data.description,
