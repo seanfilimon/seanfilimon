@@ -1,0 +1,121 @@
+---
+title: Design tokens as the foundation of consistency
+description: Inline values create inconsistency that compounds with every feature. Nokuva's token system makes consistency the default from the first component to the fiftieth page.
+author: Sean Filimon
+date: 2026-04-05
+tags:
+  - nokuva
+  - design-tokens
+  - design-system
+  - engineering
+---
+
+## The inconsistency tax
+
+Open any production application that was built without a design system. Inspect the CSS. Count the unique color values. Count the unique spacing values. Count the unique font sizes.
+
+A typical application without tokens has 30-50 unique colors when it needs 12-15. It has 20+ spacing values when it needs 8-10. It has 8-12 font sizes when a proper type scale uses 6-8.
+
+Each rogue value was reasonable when it was written. The developer needed a slightly darker border, so they picked a hex value. The designer wanted a bit more padding, so they specified 18px instead of the system's 16px. One-off decisions that are invisible individually and devastating collectively.
+
+This is the inconsistency tax. It compounds with every feature, every developer, every sprint. Fixing it after the fact means auditing every component, replacing every literal value with a token reference, and testing every screen. That is a project measured in weeks, not hours.
+
+## Tokens as the unit of design
+
+A design token is a named value that represents a design decision. Not "the color blue" but "the primary brand color." Not "16 pixels" but "the base spacing unit." The name carries intent. The value can change without changing the name.
+
+Nokuva's token system covers five categories:
+
+### Colors
+
+Every color in Nokuva is a token. The system generates complete palettes in both hex and oklch color space:
+
+- **Primary**: 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950
+- **Secondary**: same scale
+- **Accent**: same scale
+- **Neutral**: same scale (used for text, borders, backgrounds)
+- **Semantic**: success, warning, error, info — each with light and dark variants
+
+oklch provides perceptual uniformity: stepping from 400 to 500 looks like the same visual jump as stepping from 700 to 800. Hex values do not guarantee this. Two colors equidistant in hex space can look dramatically different to the human eye.
+
+The Design Theme Agent generates these palettes from a single seed color. Provide a brand blue and the agent produces the full primary scale, derives complementary secondary and accent palettes, generates the neutral scale, and creates semantic variants — all with proper contrast ratios for accessibility.
+
+### Typography
+
+The typography token system manages:
+
+- **Font families**: selected from 250+ Google Fonts with fuzzy search and instant loading
+- **Size scale**: generated from a configurable ratio (major third at 1.25, perfect fourth at 1.333, or custom). Sizes are named (`text-xs`, `text-sm`, `text-base`, `text-lg`, `text-xl`, `text-2xl`, through `text-6xl`)
+- **Weight scale**: thin (100) through black (900), mapped to named tokens (`font-light`, `font-normal`, `font-medium`, `font-semibold`, `font-bold`)
+- **Line height**: tight (1.15), normal (1.5), relaxed (1.75) — applied contextually (headings get tight, body gets normal)
+- **Letter spacing**: tighter (-0.02em), normal (0), wider (0.05em)
+
+The type scale is not a flat list of sizes. It is a mathematical relationship. Each step up multiplies by the ratio. This creates visual rhythm — the jumps between sizes feel consistent because they are proportionally consistent.
+
+### Spacing
+
+Spacing tokens follow a base unit system. A 4px base generates:
+
+| Token | Value | Common use |
+|---|---|---|
+| `spacing-1` | 4px | Tight inline gaps |
+| `spacing-2` | 8px | Icon-to-text gaps, compact padding |
+| `spacing-3` | 12px | Small card padding |
+| `spacing-4` | 16px | Standard padding, section gaps |
+| `spacing-5` | 20px | Medium padding |
+| `spacing-6` | 24px | Card padding, form gaps |
+| `spacing-8` | 32px | Section padding |
+| `spacing-10` | 40px | Large section gaps |
+| `spacing-12` | 48px | Page section spacing |
+| `spacing-16` | 64px | Hero padding |
+| `spacing-20` | 80px | Major section breaks |
+| `spacing-24` | 96px | Full section spacing |
+
+No magic numbers. Every spacing value in the design references a token. When the design team decides that `spacing-4` should be 18px instead of 16px (perhaps for better touch targets), one change in the Theme Editor updates every element using that token across the entire project.
+
+### Border radius
+
+Four semantic tokens: `radius-sm`, `radius-md`, `radius-lg`, `radius-full`. Consistent rounding across every card, button, input, and container. No element has a bespoke border radius unless it is a deliberate design decision expressed as a new token.
+
+### Shadows and elevation
+
+A layered shadow system with semantic names:
+
+- **shadow-sm**: subtle depth for cards and inputs
+- **shadow-md**: moderate elevation for dropdowns and popovers
+- **shadow-lg**: prominent elevation for modals and dialogs
+- **shadow-xl**: maximum elevation for overlays
+
+Each shadow token defines offset, blur, spread, and color values that respect the overall color palette. Dark mode shadows use different opacity and color values than light mode shadows — managed automatically by the theme system.
+
+## The Theme Editor
+
+Tokens are not a hidden configuration file. They are managed from a dedicated Theme Editor panel — a first-class interface alongside the layer tree and the inspector.
+
+The Theme Editor shows every token category with live previews. Click a color token to open the oklch picker. Adjust a spacing value and watch every element referencing it reflow in real-time on the canvas. Change a font family and see every heading and paragraph update instantly across every frame and page.
+
+This is the critical workflow difference. In a prompt-to-code tool, changing the primary color means re-prompting every page that uses it. In Nokuva, changing the primary color means changing one token value. The propagation is instant and complete.
+
+## Live theme resolution
+
+When a VNode references `var(--primary-600)`, the canvas rendering engine resolves that token to its current value and renders the computed color. But the VNode data retains the token reference, not the resolved value.
+
+This distinction is important:
+
+- **Canvas rendering** sees the resolved value (the actual blue) for visual fidelity
+- **The VNode tree** stores the token reference (primary-600) for portability and consistency
+- **Code export** outputs the token reference in the chosen format (CSS custom property, Tailwind class, or SCSS variable)
+
+Changing a token value triggers re-resolution for every VNode that references it. The canvas updates in real-time. No manual find-and-replace. No re-prompting. No rebuild.
+
+## The compound effect
+
+The value of tokens is not in any single decision. It is in the compound effect across a project's lifetime.
+
+Sprint one: three pages, 50 elements, all using tokens. Changing the primary color updates 50 elements.
+
+Sprint ten: thirty pages, 2,000 elements, all using tokens. Changing the primary color still updates with one click. The cost of a brand refresh does not scale with the size of the project. It remains constant: change the token.
+
+Without tokens, that same brand refresh at sprint ten means auditing 2,000 elements for the old color value, replacing each one, and testing every page for regressions. That is not a design task. That is a migration.
+
+Design tokens are not a nice-to-have for large projects. They are the difference between a design system that scales and inline values that accumulate into debt.

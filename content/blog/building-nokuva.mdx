@@ -1,0 +1,110 @@
+---
+title: Building Nokuva — the thought process behind AI-native design
+description: The decisions, constraints, and convictions that shaped a design editor built for the AI era from the ground up.
+author: Sean Filimon
+date: 2026-04-13
+tags:
+  - nokuva
+  - design
+  - ai
+  - architecture
+  - engineering
+---
+
+## The gap nobody was filling
+
+I did not set out to build a design tool. I set out to fix a workflow that was costing every team I worked with weeks of wasted effort.
+
+The pattern was the same everywhere. Designers create mockups in Figma. Developers interpret the mockups and rebuild them in code. The rebuild never matches perfectly. Stakeholders request changes. Developers go back to code. The mockups drift out of sync. Within two sprints the Figma file is a historical artifact that nobody updates and nobody trusts.
+
+Then the prompt-to-code tools arrived and the industry collectively decided the solution was to skip design entirely. Type a description, get code, ship it. No mockups, no handoff, no gap.
+
+Except now there was a different gap. No exploration — you get one output per prompt. No refinement — you edit code or re-prompt. No system — every generated page is an island with its own inline values. The design phase was not eliminated. It was eliminated and nothing replaced it.
+
+Nokuva started as a question: what if the design phase had its own AI-native tool? Not AI bolted onto a vector editor. Not AI that generates code. AI that generates designs on a real canvas with a real editor and a real token system.
+
+## Choosing the Virtual DOM
+
+The first architectural decision was the most consequential. What is the fundamental unit on the canvas?
+
+Traditional design tools use proprietary vector formats. Figma has its own internal representation. Sketch has its own. These formats are optimized for rendering fidelity but bear no structural relationship to the code that developers write. A Figma frame and a React component might look the same but they are different data structures with different semantics.
+
+We chose HTML. Every element on the Nokuva canvas is a VNode — a lightweight, JSON-serializable object that represents a real HTML element. A `div` on the canvas is a `div` in the VNode tree. A heading is an `h1`. A button is a `button`. The 40+ element primitives span layout (`div`, `section`, `header`, `footer`, `main`, `aside`, `nav`), typography (`h1`-`h6`, `p`, `span`, `blockquote`), forms (`input`, `select`, `textarea`, `button`), media (`img`, `video`, `svg`), and interactive elements.
+
+This decision had three consequences we were betting on:
+
+**Design structure equals code structure.** There is no translation layer between what the designer sees and what the developer gets. The VNode tree is the component tree. Handoff is not interpretation — it is serialization.
+
+**AI reads and writes the native format.** The VNode is JSON. AI models are excellent at structured JSON generation. The multi-agent system generates VNodes directly, not code strings that need parsing. This is why generation is fast and accurate — the AI is working in its native medium.
+
+**Everything is serializable.** The entire canvas state can be saved as JSON, version-controlled, diffed, and restored. No proprietary binary formats. No lock-in.
+
+The trade-off was real: we gave up the infinite fidelity of vector graphics. But design tools for UI are not illustration tools. UI is made of HTML elements. Building a design tool on HTML elements means the tool speaks the same language as the output.
+
+## The multi-agent architecture
+
+Early prototypes used a single model for everything. Describe a page, get a page. It worked — in the way that a Swiss Army knife works. It could do everything and it did nothing particularly well.
+
+The layouts were structurally reasonable but the color choices were generic. When the color system was good, the typography was an afterthought. When everything looked decent, the component hierarchy was flat and unsemantic.
+
+The breakthrough was separating concerns the way a design team separates roles. A design director does not pick fonts. A typographer does not choose the layout grid. Each role has focused expertise and a defined scope.
+
+We built six agents:
+
+**The Orchestrator** receives the user's intent and decomposes it into tasks. "A SaaS pricing page with three tiers, dark theme, gradient accents" becomes: establish a dark color system with gradient tokens, define a typography scale for marketing pages, build a three-column pricing layout with tier hierarchy, populate with content structure.
+
+**The Plan Agent** takes the decomposed tasks and produces a structured blueprint — a JSON specification that describes what will be built before any canvas work begins. This prevents the common failure mode of AI generation: plunging into output without planning.
+
+**The Design Theme Agent** builds color systems. Not "pick a blue." Full palette generation with semantic naming, oklch color space for perceptual uniformity, light and dark mode variants, and proper contrast ratios. The output is a set of design tokens, not CSS variables.
+
+**The Design Spec Agent** handles typography and spacing. Font selection from 250+ Google Fonts, type scale generation (major third, perfect fourth, or custom), spacing systems based on a consistent base unit, and shadow/elevation hierarchies. Everything output as tokens.
+
+**The Frame Builder Agent** constructs the actual canvas layout. It consumes the theme tokens and spec tokens as constraints, builds the VNode tree, applies the design system, and handles component hierarchy, alignment, and responsive structure.
+
+**The UI Agent** handles code-level output when the design is ready for conversion. It reads the VNode tree with all resolved tokens and produces clean, tokenized code — not a re-generation from the prompt, but a direct conversion from the perfected design.
+
+Each agent sees only what it needs. The Theme Agent does not see the layout. The Frame Builder does not make color decisions. Focused context produces better results than a generalist model trying to hold everything in memory simultaneously.
+
+## SpacetimeDB for real-time collaboration
+
+Most collaborative tools use WebSocket connections with a relay server. Client A makes a change, sends it to the server, the server broadcasts to Client B. Conflict resolution is bolted on — either last-write-wins, or operational transforms, or CRDTs layered on top of the message passing.
+
+We wanted something fundamentally different. SpacetimeDB is an in-memory relational database with built-in real-time subscriptions. Every canvas change is a database operation. Every subscriber gets updates from the database directly. There is no message relay. There is no separate conflict resolution layer. The database is the collaboration engine.
+
+What this enables:
+
+- **Per-node granular updates.** When you move a button, the database updates that node's position. Subscribers receive the delta for that node. Not a full-frame reload. Not a serialized canvas state. One node, one update.
+- **Live cursors and selections.** Each user's cursor position and selection state is a database row. Subscribing to cursor updates is subscribing to a table. The latency is database latency, not WebSocket-relay latency.
+- **Collaborative undo/redo.** Each user's operation history is stored in the database. Undoing your change does not undo someone else's. The database maintains the causal ordering.
+- **Advisory node locking.** Select a text element to edit it and the database marks it as locked by you. Other users see the lock indicator in real-time. Not a hard lock — an advisory that prevents accidental concurrent edits.
+- **Presence detection.** Active, idle, or away status per user. Updated by the database, not by periodic WebSocket pings.
+
+The dual-database architecture pairs SpacetimeDB for real-time canvas state with PostgreSQL for persistent data — authentication, billing, accounts, audit logs, and asset storage. Each database handles what it is good at. SpacetimeDB handles the hot path. PostgreSQL handles the durable path.
+
+## The design token system
+
+Tokens were not an afterthought. They were the second decision after the Virtual DOM.
+
+Every VNode can reference tokens instead of literal values. A heading does not have `color: #1a1a2e`. It has `color: var(--primary-900)`. A card does not have `padding: 24px`. It has `padding: var(--spacing-6)`. The token system includes:
+
+- **Colors**: hex and oklch with full palette generation. Semantic naming (primary, secondary, accent, neutral, success, warning, error) with numbered scales (50-950).
+- **Typography**: font family, size scale, weight scale, line height, letter spacing. All from a dedicated type scale generator.
+- **Spacing**: consistent rhythm based on a configurable base unit. 4px base gives you 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96.
+- **Border radius**: small, medium, large, full. Consistent across every component.
+- **Shadows and elevation**: layered shadow system with semantic names (sm, md, lg, xl).
+
+All tokens are editable from a dedicated Theme Editor panel. Change a value and every element referencing that token updates instantly across every frame and page. The Theme Editor is not a settings page buried in a menu — it is a first-class panel alongside the layer tree and the inspector.
+
+This is what prevents the inconsistency that plagues prompt-to-code workflows. When every element references tokens instead of literals, consistency is structural. You cannot accidentally introduce a rogue color value because the workflow encourages tokens by default.
+
+## What I would do differently
+
+If I started over, I would build the Theme Editor first. We built the canvas and the AI generation pipeline before the token management UI was complete, which meant early designs used inline values that had to be retrofitted to tokens. Building the token system first would have made every subsequent feature cleaner.
+
+I would also ship a simpler agent architecture initially. Six agents is the right number for production quality, but two agents — a planner and a builder — would have been sufficient for the first usable prototype. We over-engineered the agent system before validating the core canvas experience.
+
+## Where it stands
+
+Nokuva is an AI-native design editor with a full visual editor, multi-agent AI generation, a design token system, and real-time collaboration via SpacetimeDB. The canvas supports 40+ HTML element primitives, 10,000+ icons from 8 libraries, 250+ Google Fonts, and a professional component collection including navigation bars, hero sections, feature grids, pricing tables, testimonials, and footers — all tokenized and theme-aware.
+
+The thesis has not changed since day one. Design is not overhead. It is leverage. The fastest way to ship quality is not to skip design. It is to design 50x faster.

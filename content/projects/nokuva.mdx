@@ -1,0 +1,165 @@
+---
+title: Nokuva
+description: The premier AI-native design editor. Describe your vision, refine on a real canvas, build your design system, and convert to production-ready code.
+role: Founder & CEO
+status: Active
+tagline: The premier design software for the AI era
+logo: /projects/nokuva.svg
+banner: /nokuva/nokuva-bg.png
+date: 2025-10-01
+stack:
+  - Virtual DOM
+  - Multi-Agent AI
+  - SpacetimeDB
+  - PostgreSQL
+  - TypeScript
+  - React
+  - Tailwind CSS
+  - HTML/CSS
+  - oklch
+highlights:
+  - AI-native design editor with multi-agent architecture for specialized design generation
+  - Virtual DOM canvas where every element is a real HTML VNode, not a vector
+  - Built-in design token system with colors, typography, spacing, shadows, and radii
+  - Theme Editor panel with live token resolution across every frame and page
+  - SpacetimeDB real-time collaboration with per-node granular updates
+  - 40+ HTML element primitives across layout, typography, forms, media, and interactive categories
+  - 10,000+ icons from 8 libraries and 250+ Google Fonts with fuzzy search
+  - Professional component collection including navbars, heroes, pricing tables, and footers
+  - Dual-database architecture with SpacetimeDB for canvas state and PostgreSQL for persistence
+  - Production-ready code conversion from perfected designs with full token coverage
+people:
+  - Sean Filimon
+  - Brian Mutungi
+  - Josh Wyant
+  - Owen Rossi
+blogs:
+  - building-nokuva
+  - nokuva-virtual-dom-design-equals-code
+  - nokuva-multi-agent-ai
+  - nokuva-real-time-collaboration-spacetimedb
+  - nokuva-design-tokens-foundation-consistency
+articles:
+  - why-design-tools-that-skip-design-arent-design-tools
+  - the-cost-of-skipping-the-design-phase
+  - ai-native-vs-ai-bolted-on
+guides:
+  - getting-started-with-nokuva
+  - building-a-design-system-in-nokuva
+  - converting-your-design-to-code
+tags:
+  - design
+  - ai
+  - design-tokens
+  - collaboration
+  - virtual-dom
+---
+
+Design tools that jump straight from prompt to code skip the entire design phase — the exploration, refinement, and token systems that make products scalable. Nokuva is the professional design editor rebuilt for the AI era. Full visual editor with layers, frames, and an infinite canvas. AI that generates designs, not code dumps. A design token system. The Figma feel — but AI-native from the ground up.
+
+## Design-First, Code-Second
+
+The central thesis. When you skip design and go straight to code, every iteration costs engineering hours, token bloat from AI code generation eats your budget, no design system means inconsistent UI across features, and UX issues become expensive technical debt. Nokuva keeps you in the cheap phase until it is right.
+
+Fixing a spacing issue in a visual editor: 30 seconds. Fixing the same issue in production: 30 minutes to 3 hours. The design phase is not overhead. It is leverage.
+
+## The Canvas
+
+Every element on the Nokuva canvas is a VNode — a lightweight, JSON-serializable object that represents a real HTML element. Not vectors. Not screenshots. Not code previews.
+
+A `div` on the canvas is a `div` in the VNode tree. A heading is an `h1`. A button is a `button`. The 40+ element primitives span layout, typography, forms, media, and interactive categories. What you see on the canvas is exactly what developers get.
+
+The visual editor provides the muscle memory of professional design tools:
+
+- Infinite canvas with multi-page support and frame-based artboards with device presets
+- Complete layer tree with drag-and-drop reordering, visibility, locking, and grouping
+- Visual inspection overlays — click any element, see every property
+- Pixel-level control over spacing, typography, and hierarchy
+- Direct manipulation with alignment guides and snapping
+
+## Virtual DOM Architecture
+
+VNodes are the fundamental unit. Each VNode carries:
+
+- **type** — the HTML element type (`div`, `h1`, `button`, `nav`, etc.)
+- **props** — element attributes and class names
+- **styles** — CSS properties that reference design tokens (`var(--primary-600)`, `var(--spacing-4)`)
+- **children** — nested VNodes forming the component tree
+- **meta** — design tokens referenced, Tailwind class mappings, component membership
+
+Everything is JSON-serializable. The entire canvas can be saved, version-controlled, diffed, and restored. The AI generates VNodes directly — structured JSON, not code strings. The conversion to code reads the same tree the canvas renders. No translation layer. No handoff.
+
+## Multi-Agent AI
+
+Not a single model doing everything poorly. Six specialized agents with focused context:
+
+**Orchestrator** — understands intent and decomposes it into tasks for the right specialists.
+
+**Plan Agent** — produces structured blueprints before canvas work begins, preventing the common failure mode of generating without planning.
+
+**Design Theme Agent** — builds complete color systems with oklch palettes, semantic naming, dark mode variants, and proper contrast ratios.
+
+**Design Spec Agent** — handles typography selection from 250+ Google Fonts, type scale generation, spacing systems, and shadow hierarchies.
+
+**Frame Builder Agent** — constructs the VNode tree on the canvas using theme and spec tokens as constraints, ensuring every element references the design system.
+
+**UI Agent** — converts the perfected design to clean, tokenized production code. Reads the canvas state, not the original prompt.
+
+Each agent sees only what it needs. The Theme Agent does not see the layout. The Frame Builder does not make color decisions. Specialization produces better results than a generalist model trying to hold everything simultaneously.
+
+## Design Token System
+
+Tokens from day one. Every VNode references tokens instead of literal values:
+
+- **Colors** — hex and oklch with full palette generation. Primary, secondary, accent, neutral, and semantic scales (50-950). Light and dark mode.
+- **Typography** — font family, size scale (configurable ratio), weight scale, line height, letter spacing. 250+ Google Fonts with fuzzy search.
+- **Spacing** — consistent rhythm from a configurable base unit (4px default). Named tokens from `spacing-1` through `spacing-24`.
+- **Border radius** — small, medium, large, full. Consistent across every component.
+- **Shadows and elevation** — layered shadow system with semantic names (sm, md, lg, xl).
+
+All editable from a dedicated Theme Editor panel. Change a token value and every element using it updates instantly across every frame and page. The Theme Editor is not buried in settings — it is a first-class panel alongside the layer tree and inspector.
+
+## Real-Time Collaboration
+
+SpacetimeDB — an in-memory relational database with built-in real-time subscriptions. Not WebSocket relay with bolted-on conflict resolution.
+
+Every canvas change is a database operation. Every subscriber gets updates instantly:
+
+- **Live cursors and selections** from every team member at database latency
+- **Per-node granular updates** — move a button, subscribers get the delta for that node, not a full-frame reload
+- **Collaborative undo/redo** that respects each user's history independently
+- **Advisory node locking** — see who is editing what in real-time
+- **Presence detection** — active, idle, or away status without polling
+
+The dual-database architecture pairs SpacetimeDB for real-time canvas state with PostgreSQL for persistent data — authentication, billing, accounts, audit logs, and asset storage. Each database handles what it is good at.
+
+## Asset Libraries
+
+- **10,000+ icons** from 8 libraries: Material Design, Heroicons, Feather, Font Awesome, Ionicons, Ant Design, and more
+- **250+ Google Fonts** with fuzzy search and instant loading
+- **Professional component collection**: navigation bars, hero sections, feature grids, pricing tables, testimonials, footers — all tokenized and theme-aware
+- Everything declared as JSON — serializable, AI-readable, version-controllable. No external dependencies. No broken imports.
+
+## Code Output
+
+The perfected design converts to clean, production-ready code. The conversion reads the VNode tree — the same structure rendered on the canvas — and outputs tokenized component code. CSS custom properties, Tailwind utilities, or both.
+
+No regeneration bloat from re-prompting. No inconsistencies from prompt iteration. No inline values where tokens should be. Just intentional, structured code that reflects the design system.
+
+## The Three Eras
+
+**Era 1 — Static Design (2000s)**: Photoshop, Sketch. Design as image manipulation. Output: PNGs and PDFs that developers rebuilt from scratch.
+
+**Era 2 — Collaborative Vectors (2010s)**: Figma, web-based multiplayer. Design as real-time vectors. Output: inspect panels and handoff links that developers interpreted.
+
+**Era 3 — AI-Native Design (2026+)**: Nokuva. Design as structured, code-aware documents. Output: tokenized, production-mapped designs that are the source of truth. AI generates from natural language. Virtual DOM means design equals code structure. SpacetimeDB means real-time at database speed.
+
+## The Workflow
+
+1. **Describe your vision** — tell Nokuva what you want in plain English
+2. **AI generates your design** — structured layout on a real canvas in seconds
+3. **Refine and iterate** — visual editor with layers, frames, inspect panels, pixel-level control
+4. **Build your system** — tokens, themes, components in the Theme Editor
+5. **Convert to code** — clean, tokenized, production-ready output from the perfected design
+
+Design interfaces at the speed of thought.

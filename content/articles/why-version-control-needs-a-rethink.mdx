@@ -1,0 +1,31 @@
+---
+title: Why version control needs a rethink
+description: Git solved the problems of 2005. Here is what a modern version control system needs to handle in 2026.
+author: Sean Filimon
+date: 2026-02-15
+thumbnail: /thumbnails/version-control.jpg
+tags:
+  - w0rktree
+  - version-control
+  - engineering
+---
+
+## The Git ceiling
+
+Git is brilliant software. It solved distributed collaboration for a generation of developers. But the workflows we run today, monorepos with thousands of contributors, fine-grained access controls, real-time collaboration, are pushing against design decisions made twenty years ago.
+
+## Where it breaks down
+
+### Access control is an afterthought
+
+Git has no concept of per-path permissions. If you can clone the repo, you can read every file. Every enterprise bolts on a wrapper. GitHub, GitLab, Bitbucket all implement their own permission layers on top because the protocol doesn't support it.
+
+### Monorepos strain the model
+
+Large monorepos routinely hit performance cliffs: slow clones, expensive `git status`, merge conflicts that span thousands of files. Partial clone and sparse checkout are patches, not solutions.
+
+## What W0rktree does differently
+
+W0rktree was designed with these problems as first-class constraints. Access controls are built into the protocol. The storage model is optimized for monorepo-scale trees. And it is written in Rust, so the CLI is fast by default, not fast after tuning.
+
+This isn't about replacing Git overnight. It's about building the version control system that matches how teams actually work in 2026.

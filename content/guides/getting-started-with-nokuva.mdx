@@ -1,0 +1,111 @@
+---
+title: Getting started with Nokuva
+description: Learn the core workflow, interface, and concepts to start designing with Nokuva in minutes.
+author: Sean Filimon
+date: 2026-04-13
+difficulty: beginner
+tags:
+  - nokuva
+  - getting-started
+  - design
+---
+
+## What is Nokuva
+
+Nokuva is an AI-native design editor. You describe what you want in plain English, the AI generates a structured design on a real canvas, and you refine it with professional visual tools — layers, frames, inspect panels, drag-and-drop, pixel-level control. When the design is right, you convert to production-ready code.
+
+Nokuva is not a prompt-to-code tool. It does not generate code from your description. It generates designs. The distinction matters: designs are cheap to iterate on, code is expensive. Nokuva keeps you in the cheap phase until you are ready.
+
+## The five-step workflow
+
+Every project in Nokuva follows the same sequence.
+
+### Step 1 — Describe your vision
+
+Open a new project and type what you want in the prompt field. Be as detailed or brief as you want:
+
+- Brief: "A pricing page with three tiers"
+- Detailed: "A SaaS pricing page with three tiers, dark theme, gradient accents, the middle tier featured with a badge, monthly and annual toggle"
+
+The AI understands context, design patterns, and intent. You do not need to specify every element. "A pricing page" is enough to generate a structurally complete pricing section with headers, tier cards, feature lists, and CTA buttons.
+
+### Step 2 — AI generates your design
+
+Nokuva transforms your description into a fully structured layout on the canvas. This is not a code preview or a screenshot. It is a real design with:
+
+- Real HTML elements (every element is a VNode — a `div`, `h1`, `button`, not a vector)
+- Design tokens for colors, typography, and spacing
+- Proper component hierarchy (semantic HTML structure)
+- Responsive layout using CSS grid and flexbox
+
+Generation takes seconds. The multi-agent system works in stages: the Orchestrator decomposes your intent, the Theme Agent builds a color system, the Spec Agent sets typography and spacing, and the Frame Builder constructs the layout on the canvas.
+
+### Step 3 — Refine and iterate
+
+This is where Nokuva saves time and money. Open the visual editor and work with the design directly:
+
+**Layer tree** — every element appears in the layer panel on the left. Drag elements to reorder them. Toggle visibility. Lock elements to prevent accidental edits. Group related elements into named containers.
+
+**Inspector panel** — click any element to see its properties on the right. Adjust spacing, typography, colors, borders, shadows, and layout properties. Every change renders immediately on the canvas.
+
+**Direct manipulation** — drag elements to reposition them. Resize by dragging handles. Hold Shift to maintain aspect ratio. Use alignment guides that snap to other elements.
+
+**AI refinement** — ask the AI to modify the existing design. "Make the hero section taller" or "Switch to a blue color scheme" modifies the current canvas state instead of regenerating from scratch.
+
+Every change at this step costs nothing beyond the time to make it. The same changes in code would cost engineering hours.
+
+### Step 4 — Build your system
+
+As your project grows beyond a single page, the design system becomes essential. Open the Theme Editor panel and manage:
+
+- **Colors** — view and edit every color token. Adjust the primary palette seed and watch the full scale regenerate. Switch between hex and oklch color space.
+- **Typography** — select fonts from 250+ Google Fonts with fuzzy search. Adjust the type scale ratio. Preview every size in the scale.
+- **Spacing** — set the base unit and see the generated spacing scale. Preview how spacing values look at each level.
+- **Shadows** — configure shadow tokens with visual previews at each elevation level.
+- **Border radius** — set the radius values for small, medium, large, and full tokens.
+
+Change any token value and every element on the canvas using that token updates instantly. This is live theme resolution — the canvas always reflects the current state of the design system.
+
+### Step 5 — Convert to code
+
+When the design is finalized — explored, refined, systematized, and approved — convert to production-ready code. The conversion reads the VNode tree (the same structure rendered on the canvas) and outputs clean, tokenized code.
+
+The output reflects every change you made visually. The adjusted padding, the swapped color, the restructured layout — all captured in the VNode tree and present in the code. No re-generation. No prompt interpretation. A direct conversion from the perfected design.
+
+## The interface
+
+### Canvas
+
+The main workspace. An infinite canvas where frames (artboards) hold your designs. Zoom with scroll or pinch. Pan by holding Space and dragging. Create new frames for different pages or breakpoints.
+
+### Layer tree (left panel)
+
+The structural view of your design. Every element is listed with its HTML type. Drag to reorder. Click the eye icon to toggle visibility. Click the lock icon to prevent edits. Nest elements by dragging them onto container elements.
+
+### Inspector (right panel)
+
+The property editor. Select an element on the canvas and the inspector shows every configurable property: layout mode (flex, grid, block), spacing (padding, margin, gap), typography (font, size, weight, line height, color), background, border, shadow, and size constraints.
+
+Properties that reference design tokens show the token name. Click to change the token or override with a literal value (though tokens are recommended for consistency).
+
+### Theme Editor (right panel, tab)
+
+Alongside the inspector, the Theme Editor manages the project's design system. Switch between tabs for colors, typography, spacing, shadows, and radii. Changes propagate live across the canvas.
+
+### Toolbar (top)
+
+Frame creation, element insertion, zoom controls, and undo/redo. The element insertion menu organizes the 40+ HTML primitives by category: layout, typography, forms, media, and interactive.
+
+## Key concepts
+
+**VNode** — the fundamental unit. Every canvas element is a VNode: a JSON object with type, props, styles, children, and meta. What you see on canvas is what the code will produce.
+
+**Design token** — a named value (like `primary-600` or `spacing-4`) that can be referenced by any element. Change the token, change every element using it.
+
+**Frame** — an artboard on the canvas. Each frame represents a page, screen, or component variant. Frames can have preset dimensions (desktop, tablet, mobile) or custom sizes.
+
+**Multi-agent AI** — Nokuva uses specialized AI agents (Orchestrator, Plan, Theme, Spec, Frame Builder, UI) instead of a single model. Each agent handles one aspect of design with focused context.
+
+## What comes next
+
+Once you are comfortable with the basics, explore the guide on building a design system in Nokuva for managing tokens, themes, and reusable components at scale. The guide on converting designs to production-ready code covers the export workflow and code quality considerations.

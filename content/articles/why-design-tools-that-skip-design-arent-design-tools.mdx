@@ -1,0 +1,52 @@
+---
+title: Why design tools that skip design aren't design tools
+description: A prompt box and a preview window do not make a design tool. Here is the test that separates real design software from code generators wearing a mask.
+author: Sean Filimon
+date: 2026-04-10
+tags:
+  - nokuva
+  - design
+  - ai
+---
+
+## The mask
+
+A new category of tools has emerged over the past two years. They accept a prompt, generate code, and show you a preview. Some call themselves design tools. They are not.
+
+They are app builders. Code generators. Prompt-to-code pipelines with a rendering window. The preview is not a canvas. You cannot select an element and drag it. You cannot open a layer tree and reorder components. You cannot inspect spacing, adjust typography scales, or build a token system. You type a prompt, get code, and if it is wrong, you type another prompt.
+
+That is not design. That is prompt engineering with a live reload.
+
+## The design software test
+
+A real design tool gives you five things:
+
+- **An infinite canvas with artboards and frames.** Not a single viewport. A canvas you can zoom, pan, and organize multiple screens on simultaneously.
+- **A layer tree you can manipulate.** Drag-and-drop reordering, visibility toggles, locking, grouping. The structural backbone of any non-trivial layout.
+- **Design tokens, themes, and color systems.** Not inline styles scattered across generated code. A centralized system where changing one value updates every element that references it.
+- **Pixel-level control over spacing, typography, and hierarchy.** Click an element. See its properties. Change them directly. No regeneration required.
+- **The ability to inspect, drag, and refine every element.** The muscle memory of professional design tools — select, move, resize, align, distribute.
+
+If a tool does not have these, it is a code generator with a preview window. The preview is not the product. The editor is the product.
+
+## Why it matters
+
+Skipping the design phase seems faster until the costs compound. Without a visual editor, every iteration means re-prompting. Without a token system, inconsistency spreads across features. Without an inspect panel, fixing a spacing issue means finding it in code. Without a layer tree, restructuring a layout means describing the restructuring in English and hoping the model interprets it correctly.
+
+The cheap phase of product development is design. Fixing a spacing issue in a visual editor takes 30 seconds. Fixing the same issue in production takes 30 minutes to 3 hours. Tools that skip design do not save time. They move the cost downstream and multiply it.
+
+## What professional designers actually need
+
+Designers who ship products need more than generation. They need exploration — trying three layout directions before committing to one. They need refinement — adjusting the details that separate competent from excellent. They need systems — tokens, scales, and themes that keep a product consistent as it grows from one page to fifty.
+
+Prompt-to-code tools give you generation and nothing else. Every direction change is a regeneration. Every refinement is a re-prompt. Every feature is an island with no shared system connecting it to the rest.
+
+## The category distinction
+
+This is not about better or worse. It is about accurate labeling. Bolt, v0, and Lovable are useful tools for what they are: rapid code scaffolding from natural language. That is a legitimate category with real value.
+
+But calling them design tools sets incorrect expectations and papers over the missing phase. Design is exploration, refinement, and systematization. If your tool skips all three, it is not a design tool — regardless of what the landing page says.
+
+Nokuva exists because the design phase deserves its own AI-native tool. A real canvas with layers, frames, and an infinite workspace. AI that generates designs, not code dumps. A token system that prevents inconsistency from the first component. The Figma feel — but AI-native from the ground up.
+
+Design first. Code second. That is the order that produces quality.

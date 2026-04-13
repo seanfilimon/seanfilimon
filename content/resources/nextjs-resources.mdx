@@ -1,0 +1,41 @@
+---
+title: Next.js resources
+description: A curated collection of tools, libraries, and references for building with Next.js.
+author: Sean Filimon
+date: 2026-03-01
+thumbnail: /thumbnails/nextjs-resources.jpg
+category: Next.js
+tags:
+  - nextjs
+  - react
+  - frontend
+---
+
+## Official
+
+- [Next.js Documentation](https://nextjs.org/docs) — The primary reference for App Router, Server Components, and deployment.
+- [Vercel Templates](https://vercel.com/templates/next.js) — Production-ready starters for common patterns.
+- [Next.js GitHub](https://github.com/vercel/next.js) — Source code, issues, and RFCs.
+
+## Data Fetching
+
+- **Server Components** — Fetch data directly in async components. No client-side data fetching libraries needed for most read operations.
+- **Server Actions** — Mutate data with form actions and `useActionState`. Replaces most API route patterns.
+- **React Query** — Still useful for complex client-side caching, optimistic updates, and real-time data.
+
+## Styling
+
+- **Tailwind CSS v4** — CSS-first config with `@theme`. The default choice for utility-first styling.
+- **CSS Modules** — Built into Next.js. Zero config, zero runtime.
+
+## Deployment
+
+- **Vercel** — Zero-config deployments. The reference platform for Next.js.
+- **Foltrac** — Cross-cloud deployments when you need to run on AWS, GCP, and Azure simultaneously.
+- **Docker** — Self-host with the `standalone` output mode.
+
+## Performance
+
+- Use `next/dynamic` for heavy client components.
+- Use `next/image` for all images. It handles format conversion, resizing, and lazy loading.
+- Enable Turbopack in development for faster rebuilds.

@@ -1,0 +1,63 @@
+---
+title: The cost of skipping the design phase
+description: Every iteration in design costs pennies. The same iteration in code costs dollars. Here is the math behind why the design phase is leverage, not overhead.
+author: Sean Filimon
+date: 2026-04-08
+tags:
+  - nokuva
+  - design
+  - product
+---
+
+## The 50x gap
+
+Fixing a spacing issue in a design editor: 30 seconds. Click the element, drag the handle or type a number, done.
+
+Fixing the same spacing issue in production: find the component in the codebase, understand the layout context, make the change, verify it does not break adjacent elements, test across breakpoints, push through CI, get it reviewed. 30 minutes on a good day. 3 hours if the component is shared.
+
+This is not a theoretical gap. It is the daily reality for every team that ships without a design phase. And spacing is the easy case. Restructuring a page layout, changing a color system, or adjusting typographic hierarchy — the multiplier gets worse as complexity increases.
+
+## The prompt-to-code trap
+
+Tools that generate code from prompts create an illusion of speed. You describe a pricing page, the model generates it in seconds. Fast. Except:
+
+- **You cannot explore multiple directions without regenerating everything.** Want to see the pricing page with horizontal cards instead of vertical? Re-prompt. Want to compare three color treatments? Re-prompt three times.
+- **Every iteration burns AI tokens.** Each re-prompt sends the full context plus your correction back through the model. Token costs compound with every iteration.
+- **There is no design system.** The generated code uses inline values. The blue on your pricing page is `#3b82f6`. The blue on your dashboard is `#2563eb`. Nobody notices until the product has 20 screens and the inconsistency is structural.
+- **You are editing code instead of refining design.** When the generated output is wrong, you either re-prompt (expensive) or manually edit code (slow). Neither is as fast as dragging an element on a canvas.
+
+That is not faster. That is technical debt on day one.
+
+## The engineering tax
+
+When you skip design and go straight to code, four things happen:
+
+**UX issues become code issues.** A confusing navigation structure discovered after implementation requires engineering hours to restructure. The same issue caught in design requires moving some frames around.
+
+**Visual inconsistencies require manual cleanup.** Without a token system, every developer picks their own spacing values, shadow depths, and border radii. Consistency becomes a manual policing effort.
+
+**Developers reinvent patterns.** Without a component system, the third developer to build a card component builds it from scratch because they do not know the first two exist. Or they know and the implementations are different enough that consolidating them is its own project.
+
+**Every stakeholder change requires engineering hours.** The VP wants the hero section taller. The PM wants the CTA button more prominent. In a design tool, these are 30-second changes with immediate visual feedback. In code, each one is a ticket, a branch, a review, and a deploy.
+
+## The Nokuva counter
+
+The design phase is not overhead. It is leverage.
+
+Nokuva keeps you in the cheap phase until the design is right. AI generates designs on a real canvas — not code. You refine visually with a full editor: layers, frames, inspect panels, pixel-level control. Every change is instant and costs nothing beyond the click.
+
+You build a token system from day one. Colors, typography, spacing, shadows — all managed from one theme editor. Change a token value and every element using it updates across every frame and page. Consistency is the default, not an aspiration.
+
+You get stakeholder sign-off on a visual artifact, not a code deployment. When the VP wants the hero taller, you drag it. When the PM wants the CTA more prominent, you resize it and adjust the color weight. 30 seconds each. No tickets. No branches. No deploys.
+
+When the design is right — explored, refined, systematized, approved — you convert once to clean, tokenized, production-ready code. No regeneration bloat. No engineering waste. No inconsistency from prompt iteration.
+
+## The math
+
+| Phase | Cost per iteration | Iterations typical | Total cost |
+|---|---|---|---|
+| Design (visual editor) | ~$0 (time only, seconds) | 20-50 | Minutes |
+| Code (prompt-to-code) | $0.10-1.00 (AI tokens) + dev time | 10-30 | Hours + token spend |
+| Code (manual) | $50-200/hr engineering | 5-15 | Days |
+
+The fastest way to ship quality is not to skip design. It is to design 50x faster.

@@ -1,0 +1,103 @@
+---
+title: Building W0rktree — the thought process behind replacing Git
+description: The decisions, constraints, and convictions that shaped a new version control system from scratch.
+author: Sean Filimon
+date: 2026-04-12
+tags:
+  - w0rktree
+  - version-control
+  - rust
+  - engineering
+---
+
+## The moment it clicked
+
+I did not wake up one morning and decide to replace Git. No one sane does that. Git is the most successful version control system ever built. It runs the infrastructure of nearly every software company on the planet.
+
+But I kept running into the same walls. Managing a monorepo across multiple teams, watching two engineers unknowingly rewrite each other's work for a week, debugging a production incident only to find the relevant history had been squashed and rebased into oblivion. And every time I hit a wall, the answer was the same: "Git was not designed for that." Add a wrapper. Install an extension. Use a platform feature. Work around it.
+
+The problem was never one thing. It was the accumulation. Access control bolted on by GitHub. Large files handled by a parallel system called LFS. Team visibility achieved through Slack messages and standups. History safety maintained by hoping nobody runs `--force`. None of these were integrated. All of them were essential.
+
+The question that started W0rktree was not "can we build a better Git?" It was "if we designed version control today, knowing what we know about teams, monorepos, compliance, and collaboration, what would we build?"
+
+## Choosing Rust
+
+The language choice came early and was not controversial. Version control is systems software. It touches every file on the developer's machine, runs continuously in the background, and needs to handle repositories with millions of files without becoming the bottleneck.
+
+Rust gave us memory safety without garbage collection pauses, fearless concurrency for the background process, and the kind of performance ceiling that means we are never the slow thing in the pipeline. The ecosystem was also mature enough — the content-addressable storage layer uses Blake3 for hashing, gRPC for the sync protocol, and CRDT data structures for eventual consistency in the collaboration layer.
+
+But honestly, the real reason was correctness. A version control system that corrupts data is worse than useless. Rust's ownership model catches entire categories of bugs at compile time that would be runtime surprises in C or Go. When you are building something people trust with their source code, that matters.
+
+## The two-runtime split
+
+The earliest architectural decision — and the one that shaped everything — was splitting W0rktree into two cooperating runtimes.
+
+Most version control systems are either local tools that optionally talk to a remote (Git) or hosted platforms that require a server (Perforce). We wanted both. A local process that is fast, works offline, and owns the developer's working directory. A server that is authoritative, enforces policies, and provides collaboration features.
+
+The constraint we set was strict: the bgprocess never enforces access control, and the server never watches files. No overlap. No duplication. The bgprocess handles everything local: file watching, auto-snapshots, branch management, sync. The server handles everything shared: canonical history, IAM, compliance, visibility.
+
+This split was not obvious at first. Early prototypes had the bgprocess validating access rules locally. It worked, but it meant every policy change had to propagate to every client before enforcement was consistent. Moving all enforcement server-side made the system simpler to reason about and impossible to bypass.
+
+## Killing the staging area
+
+One of the first Git concepts we removed was the staging area. In Git, you `add` files to a staging area, then `commit` the staging area to history. This creates a two-step workflow where the developer manually curates which changes go into each commit.
+
+The original purpose was sensible — it lets you commit part of your working state. But in practice, most developers either `git add .` everything or spend mental energy on staging choreography that does not improve the end result.
+
+W0rktree has no staging area. No index. No `add` command. The bgprocess watches the filesystem and creates snapshots of the working state. If you want to capture a specific point, run `wt snapshot`. The snapshot captures everything.
+
+This made auto-snapshots possible. The bgprocess can create snapshots on an interval or when enough files have changed, without requiring the developer to think about it. Your job is to write code. The version control system's job is to capture your work.
+
+## Why we banned rebase
+
+This was the most debated decision. Rebase is deeply embedded in Git culture. "Clean up your branch before merging" is standard advice. Interactive rebase is considered a power-user feature, not a dangerous one.
+
+But rebase rewrites history. It changes parent hashes, which changes commit hashes, which means the commits you had are different objects from the commits on the remote. Force-pushing is required. Teammates who branched off your work find their branches pointing to commits that no longer exist.
+
+We decided early: history is a record, not a narrative. If you make a mistake, you create a new snapshot that fixes it. The mistake stays in history because that is what happened. This is how every other record-keeping system works — financial ledgers, audit logs, legal records. Version control should not be different.
+
+The trade-off is visible. Your history shows the actual development process, including the messy parts. We think that is worth it. One merge model instead of four. No accidental data loss from a bad command. Teammates can always find a common ancestor.
+
+## Staged snapshots — the feature that changes teams
+
+The idea for staged snapshots came from watching teams. Two developers on the same branch, working on adjacent files, discovering at merge time that they had been stepping on each other for days. The standup three hours earlier had not surfaced it. The ticket board showed them assigned to different tasks.
+
+Git gives you two states: invisible (haven't pushed) or permanent (pushed to branch history). There is no middle ground. Either you push your work-in-progress — polluting the branch with half-finished commits — or you stay silent and surprise everyone at merge time.
+
+Staged snapshots are the middle ground. The bgprocess syncs your snapshots to the server as a visibility layer. Your team can see which files you have changed and which branch you are on. But nothing enters branch history until you explicitly push.
+
+The server aggregates staged snapshots across all team members and presents a real-time view of active work. When you push, the system warns you if someone else has staged changes to the same files. Not a block — an advisory. Just enough information to coordinate before the conflict happens instead of after.
+
+## Declarative access control
+
+Every enterprise team I have worked with has the same problem: Git permissions live in a web UI on GitHub or GitLab, disconnected from the code they protect. No one knows who changed a permission three months ago. There is no review process. The audit trail is platform-specific and non-portable.
+
+W0rktree's access control is defined in TOML files stored alongside the code. Changes to access rules go through the same snapshot and review process as code changes. The full history is in the snapshot log. The policies are diffable, auditable, and version-controlled.
+
+The ceiling model took longer to get right. A root `.wt/access/` defines maximum permissions. Each tree's `.wt-tree/access/` can restrict further but never expand. Subtrees restrict further still. The server enforces the ceiling — a misconfigured tree policy that tries to grant more than its parent is rejected.
+
+This means you can delegate tree ownership to teams without worrying about permission escalation. The root policy is the safety boundary.
+
+## Designing for migration
+
+We knew from the start that nobody adopts a new version control system overnight. The Git compatibility layer was not an afterthought — it was designed alongside the native protocol.
+
+`wt init --from-git` imports a Git repository with full history. Live mirror mode keeps a W0rktree and a Git remote in bidirectional sync, so teams can adopt incrementally. Developers on W0rktree use `wt` commands. Developers still on Git use `git` commands. Both see the same history.
+
+The goal is to make adoption risk-free. Try W0rktree on one team. If it works, expand. If it does not, the Git remote has everything. No data loss. No big-bang migration.
+
+## What I would do differently
+
+If I started over, I would write the specification documents first. We built a working prototype before fully specifying the sync protocol and the IAM model, which led to two rewrites of the permission engine when edge cases surfaced.
+
+I would also invest in the CLI experience earlier. The protocol and storage layer are the hard engineering problems, but developers interact with the CLI every day. The command names, the output formatting, the error messages — that is where adoption lives or dies. We got the one-job-per-command principle right early, but the output formatting went through four iterations before it felt right.
+
+## Where it stands now
+
+W0rktree is open source. The core — snapshot engine, branch management, merge system, access engine — is implemented in Rust. The bgprocess runs on Linux, macOS, and Windows. The sync protocol handles staged snapshot visibility and branch synchronization.
+
+We are still building. The admin panel, the SDK event subscriptions, the full ABAC condition engine, and the policy simulation mode are in progress. The specification documents grow as the protocol stabilizes.
+
+But the foundation is solid. The architecture principles — one job per command, append-only history, non-destructive operations, real-time collaboration — are not aspirations. They are constraints enforced by the protocol. Everything built on top follows them.
+
+W0rktree is not the next version of Git. It is what comes after Git.

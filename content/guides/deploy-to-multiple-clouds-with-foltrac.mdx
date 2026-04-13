@@ -1,0 +1,55 @@
+---
+title: Deploy to multiple clouds with Foltrac
+description: Set up cross-cloud deployments with full visibility using Foltrac in under 15 minutes.
+author: Sean Filimon
+date: 2026-03-20
+difficulty: intermediate
+tags:
+  - foltrac
+  - deployment
+  - cloud
+---
+
+## What you will build
+
+By the end of this guide you will have a single Foltrac pipeline that deploys your application to AWS, GCP, and Azure simultaneously, with a unified dashboard showing health across all three.
+
+## Prerequisites
+
+- A Foltrac account (free tier works)
+- Your application containerized with Docker
+- Credentials for at least two cloud providers
+
+## Step 1: Initialize your Foltrac project
+
+```bash
+foltrac init my-app
+```
+
+This creates a `foltrac.yml` in your project root.
+
+## Step 2: Configure cloud targets
+
+Open `foltrac.yml` and add your targets:
+
+```yaml
+targets:
+  - provider: aws
+    region: us-east-1
+  - provider: gcp
+    region: us-central1
+  - provider: azure
+    region: eastus
+```
+
+## Step 3: Deploy
+
+```bash
+foltrac deploy --all
+```
+
+Foltrac builds once and pushes to all targets in parallel. The dashboard at `app.foltrac.com` shows real-time status for every target.
+
+## What comes next
+
+You can add health checks, rollback rules, and traffic splitting in the same config file. Check the Foltrac docs for advanced patterns.

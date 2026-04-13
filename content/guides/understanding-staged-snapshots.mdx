@@ -1,0 +1,181 @@
+---
+title: Understanding staged snapshots
+description: How W0rktree's staged snapshot visibility lets teams see work-in-progress in real-time without polluting branch history.
+author: Sean Filimon
+date: 2026-04-10
+difficulty: intermediate
+tags:
+  - w0rktree
+  - collaboration
+  - staged-snapshots
+---
+
+## The Git visibility problem
+
+In Git, all work is invisible until someone pushes. A developer can spend days on a feature branch and no one knows until they open a pull request. Two developers can unknowingly modify the same file, the same function, the same bug — and only discover the collision at merge time.
+
+Teams compensate with external tools: standups, Slack messages, ticket updates, "hey are you working on X?" conversations. All because Git provides zero in-flight visibility.
+
+The result is surprise merge conflicts, stale branches that no one knows are abandoned, and duplicated effort across the team.
+
+## Staged vs. pushed snapshots
+
+W0rktree introduces a visibility layer between local work and branch history. The distinction is fundamental:
+
+| | Staged snapshot | Pushed snapshot |
+|---|---|---|
+| **Visible to team** | Yes | Yes |
+| **Part of branch history** | No | Yes |
+| **Permanent** | No (ephemeral, expires) | Yes |
+| **Pollutes branch** | No | N/A — it IS the branch |
+
+The pipeline works like this:
+
+1. You edit files normally.
+2. The bgprocess captures snapshots automatically (or you run `wt snapshot` manually).
+3. Snapshots sync to the server as **staged snapshots**, attributed to your user, branch, and tree.
+4. Your team can see that you are working, which files you have changed, and how far along you are.
+5. When you are ready, `wt push` finalizes your staged snapshots into branch history.
+6. Alternatively, discard them with no trace in the branch.
+
+## What your team can see
+
+When you have staged snapshots, authorized team members see:
+
+- Which files you have modified (full file paths)
+- Which branch you are working on
+- Which tree the changes are in
+- When the latest staged snapshot was created
+- How many unpushed snapshots you have
+- Any message you attached with `wt snapshot --message`
+
+This is enough to know who is working on what, detect potential conflicts early, gauge feature progress, and distinguish active branches from stale ones.
+
+## What is deliberately not visible
+
+Staged visibility has limits by design:
+
+- **Not real-time keystrokes.** This is not Google Docs. Granularity is snapshot-level, not character-level.
+- **Not broadcasting raw edits.** Content is pulled on demand, not pushed to everyone's screen.
+- **Diffs are not pre-computed.** Viewers see file paths changed, not line-by-line diffs. Diffs can be requested on demand.
+- **License restrictions apply.** Proprietary-licensed file paths are visible, but content is hidden from viewers without a license grant.
+
+## CLI commands
+
+Check what your team is working on:
+
+```
+$ wt status --team
+
+  Tree: auth-service
+  Branch: feature/oauth
+
+  Staged Activity:
+    Alice (alice@company.io) — 3 staged snapshots (latest: 2 min ago)
+      modified: src/oauth.rs, src/token.rs
+      branch: feature/oauth
+
+    Bob (bob@company.io) — 1 staged snapshot (latest: 15 min ago)
+      modified: src/middleware/auth.rs
+      branch: fix/auth-middleware-panic
+
+    You — 2 staged snapshots (latest: just now)
+      modified: src/handlers/login.rs
+      branch: feature/oauth
+```
+
+View all unpushed staged snapshots:
+
+```
+$ wt staged
+
+  Unpushed staged snapshots:
+
+  feature/oauth (yours):
+    [snap-a1b2c3] 2 min ago — src/handlers/login.rs
+    [snap-d4e5f6] 5 min ago — src/handlers/login.rs, src/types.rs
+
+  feature/oauth (alice@company.io):
+    [snap-g7h8i9] 2 min ago — src/oauth.rs, src/token.rs
+    [snap-j0k1l2] 8 min ago — src/oauth.rs
+```
+
+Filter by user or branch:
+
+```bash
+wt staged --user alice
+wt staged --branch feature/oauth
+```
+
+## Early conflict detection
+
+One of the most valuable consequences of staged visibility is catching conflicts before they happen:
+
+```
+$ wt push
+
+  ⚠ Potential conflict detected:
+    alice@company.io has staged changes to src/oauth.rs on feature/oauth
+    Your push also modifies src/oauth.rs
+
+  This is not a merge conflict (Alice hasn't pushed yet), but you may
+  want to coordinate before she pushes.
+
+  Proceed with push? [y/N]
+```
+
+This is advisory, not blocking. The actual merge conflict (if any) happens when Alice pushes. But the early warning eliminates surprises.
+
+## Privacy controls
+
+Staged visibility is powerful, but developers keep control.
+
+**Pause sync temporarily** for experimental or throwaway work:
+
+```bash
+wt sync pause
+# Your work is invisible to the team
+wt sync resume
+```
+
+**Disable auto-sync per tree** in `.wt-tree/config.toml`:
+
+```toml
+[sync]
+auto = false
+```
+
+**Branch-level privacy** is automatic. Staged snapshots from private branches are only visible to users with `branch:read` permission. Personal feature branches stay private. Team branches show activity to the team. Public branches show activity to all authorized users.
+
+## Retention and cleanup
+
+Staged snapshots are ephemeral by design:
+
+- **Pushed snapshots** become part of branch history. The staged copy is just a status marker retained for audit.
+- **Unpushed snapshots** are retained for 30 days by default, then garbage collected.
+- **Manual clearing** is available:
+
+```bash
+wt staged clear                              # Clear your staged snapshots
+wt staged clear --branch feature/old-experiment  # Clear a specific branch
+wt staged clear --all                        # Clear everything
+```
+
+Server-side retention is configurable:
+
+```toml
+[staged]
+retention_days = 30
+gc_interval_hours = 24
+```
+
+## Real-time integration
+
+Beyond the CLI, staged visibility is available through multiple surfaces:
+
+- **Admin panel dashboard** showing real-time staged activity per tenant and tree
+- **WebSocket endpoint** (`/api/repositories/:id/staged/live`) for streaming updates to custom tooling
+- **REST API** (`GET /api/repositories/:id/staged`) for querying current staged state
+- **SDK event subscriptions** for building integrations
+
+The WebSocket stream emits events with snapshot ID, user, tree, branch, changed files, and timestamp — everything you need to build awareness tooling on top of W0rktree.

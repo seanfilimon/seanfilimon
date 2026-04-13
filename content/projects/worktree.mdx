@@ -1,0 +1,192 @@
+---
+title: W0rktree
+description: Next-generation distributed version control system built in Rust. Replaces Git with multi-tenant architecture, real-time collaboration via staged snapshots, declarative access control, native large file handling, and append-only history.
+role: Open Source Maintainer
+status: Active
+tagline: Next-generation version control built in Rust
+logo: /projects/worktree.svg
+date: 2025-10-01
+stack:
+  - Rust
+  - CRDT
+  - Blake3
+  - gRPC
+  - QUIC
+  - FastCDC
+  - TOML
+  - FUSE
+highlights:
+  - Two-runtime architecture separating local daemon from remote server
+  - Real-time staged snapshot visibility for team collaboration
+  - Declarative Terraform-style access control in version-controlled TOML
+  - Append-only history with no rebase or force-push
+  - Native large file handling via FastCDC chunking and lazy loading
+  - File-level SPDX license compliance enforcement
+  - Multi-tenant architecture with cross-tenant sharing
+  - Cross-tree dependency system with automatic TODO generation
+  - Content-addressable storage with BLAKE3 hashing
+  - Sync protocol over gRPC/QUIC with delta optimization
+people:
+  - Sean Filimon
+  - Josh Wyant
+blogs:
+  - building-worktree
+  - worktree-two-runtime-architecture
+  - worktree-staged-snapshot-visibility
+  - worktree-declarative-access-control
+  - worktree-multi-tenant-architecture
+  - worktree-license-compliance
+  - worktree-large-file-handling
+  - worktree-append-only-history
+  - worktree-cross-tree-dependencies
+  - worktree-sync-protocol
+  - worktree-storage-architecture
+articles:
+  - why-git-needs-a-successor
+  - designing-append-only-history
+  - worktree-vs-git-complete-comparison
+guides:
+  - getting-started-with-worktree
+  - understanding-staged-snapshots
+  - worktree-declarative-access-control
+  - migrating-from-git-to-worktree
+tags:
+  - version-control
+  - rust
+  - open-source
+  - distributed-systems
+---
+
+Git solved the problems of 2005. W0rktree replaces it entirely — a new version control system designed from scratch for the realities of 2026: monorepos with thousands of contributors, multi-tenant organizations, real-time collaboration, fine-grained access control, license compliance, and performance that scales.
+
+W0rktree is not a Git wrapper, not a Git hosting platform, not a layer on top of Git. It is its own system with its own protocol, its own storage model, its own identity system, and its own history model. It speaks Git when needed — for migration and interop — but Git is a compatibility target, not a dependency.
+
+## The Two-Runtime Architecture
+
+W0rktree is split into two cooperating runtimes. Neither is optional. Neither duplicates the other.
+
+The **local background process** (`worktree-bgprocess`) runs on the developer's machine. It watches files in real-time using OS-native APIs (inotify, FSEvents, ReadDirectoryChangesW), creates snapshots automatically as the developer works, manages branches, handles local merges, and orchestrates sync with the server. It is the only process that touches the working directory.
+
+The **remote server** (`worktree-server`) is the canonical source of truth. It stores authoritative history, enforces access control, aggregates staged snapshots for team visibility, manages license compliance, enforces branch protection rules, and provides APIs for the admin panel, CLI, and SDKs.
+
+This separation is a core architectural constraint: the bgprocess never enforces access control, the server never watches files, the bgprocess never stores canonical history, the server never creates auto-snapshots.
+
+```
+Developer Machine                     Remote Server
+┌─────────────────────┐               ┌─────────────────────┐
+│  worktree-bgprocess │               │  worktree-server    │
+│                     │   Sync        │                     │
+│  • File watching    │◄─────────────►│  • Canonical history│
+│  • Auto-snapshots   │   Protocol    │  • IAM enforcement  │
+│  • Branch mgmt      │  (gRPC/QUIC) │  • License checks   │
+│  • Local merge      │               │  • Staged visibility│
+│  • Large file VFS   │               │  • Branch protection│
+│  • Sync client      │               │  • API surface      │
+└─────────────────────┘               └─────────────────────┘
+```
+
+## Trees — The Fundamental Unit
+
+Trees replace Git repositories, submodules, and monorepo directory conventions with a single model. Each tree has its own snapshot history, its own branches, its own access rules via `.wt-tree/access/`, and its own ignore patterns. Trees can be nested, creating hierarchies where each level maintains independence.
+
+A microservices project might have one tree per service. A multi-platform app might have trees for frontend, backend, mobile, and shared libraries. Each tree gets its own `.wt-tree/` folder for configuration. Every tree can be synced independently — a frontend developer does not need to download the entire backend history.
+
+## Snapshots — Not Commits
+
+Snapshots are immutable, content-addressed records of a tree's complete state at a point in time. They are created automatically by the bgprocess or manually via `wt snapshot`. There is no staging area, no index, no `add` command. The developer's job is to write code; the version control system's job is to capture it.
+
+Key properties: immutable once created, content-addressed (identical states produce identical hashes), complete state (captures the full tree, not a delta), and append-only (snapshots are only ever added, never removed or reordered).
+
+## Staged Snapshot Visibility
+
+This is the feature that changes how teams collaborate.
+
+In Git, your work is invisible until you push. There is no middle ground — either you push work-in-progress to a branch or you stay silent. W0rktree introduces staged snapshots as a visibility layer between local work and branch history.
+
+The bgprocess syncs snapshots to the server automatically. Your team can see which files you have changed, which branch you are on, and how far along you are — but nothing enters branch history until you explicitly run `wt push`. Staged snapshots can be discarded without any trace in history.
+
+The server aggregates staged snapshots across all team members and warns when two developers have staged changes to the same files. Not a block — an advisory. Just enough information to coordinate before a conflict happens instead of after.
+
+## Declarative Access Control
+
+Access control is defined in TOML files alongside the code. Changes to access rules go through the same snapshot and review process as code changes. The full history is in the snapshot log. Policies are diffable, auditable, and version-controlled.
+
+W0rktree ships with five built-in roles (Owner, Admin, Maintainer, Developer, Viewer) and supports custom roles with over 20 atomic permissions. The system combines RBAC with ABAC for conditional access based on tenant attributes like department, location, or security clearance.
+
+A permission ceiling model ensures safety at scale: root `.wt/access/` defines maximum permissions across the worktree, each tree's `.wt-tree/access/` can only restrict further. The server enforces the ceiling — a misconfigured tree policy that tries to grant more than its parent allows is rejected.
+
+Path-level access requires explicit path registration in `config.toml` — no globs, no wildcards, no regex. This is intentional: predictable, auditable, O(1) lookup, and refactoring-safe.
+
+## Multi-Tenant Architecture
+
+Every actor in W0rktree is a tenant — a user or organization with verified identity. Tenants own worktrees, grant cross-tenant access, and are the unit of authentication throughout the system.
+
+Organization tenants support multiple accounts, teams for group-based access control, and role hierarchies. Cross-tenant collaboration is built into the protocol: a tenant can grant read, write, or admin access to specific trees for other tenants, with optional expiration.
+
+Worktrees have three visibility modes: private (only owner and explicit grants), shared (discoverable by listed tenants), and public (readable by all authenticated tenants, write requires explicit grants).
+
+## License Compliance Engine
+
+W0rktree tracks licenses at the file path level using SPDX identifiers. The server enforces license compliance on every sync, export, fork, and copy operation. Both IAM and license checks must pass for an operation to succeed — a tenant with full admin permissions still cannot redistribute proprietary code without a license grant.
+
+Three grant levels control what tenants can do with licensed code: read-only (view within the platform), modify (edit but cannot export), and redistribute (full permission). License metadata travels with the code through forks, exports, and archives. Proprietary paths are automatically excluded from public archives and Git exports.
+
+## Native Large File Handling
+
+There is no separate LFS system. Files exceeding a configurable threshold are automatically split into content-addressable chunks using the FastCDC algorithm. Chunk boundaries are determined by content, not fixed offsets — small edits to a large file only produce new chunks for the changed regions.
+
+The bgprocess serves large file content through platform-native virtual filesystems: FUSE on Linux, FUSE-T on macOS, and ProjFS on Windows. Applications see regular files. The lazy loading is invisible to editors and build tools. Cloning a tree does not require downloading every file.
+
+## Append-Only History
+
+There is no rebase. There is no `reset --hard`. There is no force-push. History is a record, not a narrative. If you make a mistake, you create a new snapshot that fixes it. The original remains in history because that is what happened.
+
+One merge model instead of four. No accidental data loss from a bad command. Teammates can always find a common ancestor. Soft deletes with configurable recovery windows mean nothing is permanently destroyed immediately. A full reflog is maintained both locally and server-side with configurable retention.
+
+## Cross-Tree Dependency System
+
+W0rktree tracks dependencies across trees at three levels: tree dependencies (declared in config), branch dependencies (linked branches that must merge together), and snapshot dependencies (individual requirements on work in other trees).
+
+When a frontend developer needs a backend endpoint, `wt depend add` creates a structured TODO in the backend tree, links the branches for synchronized merging, and notifies the backend team. Linked branches enforce atomicity — if `frontend/feature-oauth` merges to main, then `backend/feature-oauth` must also merge. The server prevents partial feature deployments.
+
+## Sync Protocol
+
+Communication between bgprocess and server uses gRPC over QUIC (with HTTP/2 fallback). QUIC provides connection migration (laptop moves from WiFi to cellular without dropping), multiplexed streams, 0-RTT reconnection, and built-in TLS 1.3 encryption.
+
+Delta sync ensures only changed objects are transferred. Have/want negotiation identifies what the server already has. Large file chunks are deduplicated at the server level. All data in transit is compressed with zstd. When the server is unreachable, the bgprocess continues all local operations and catches up on reconnection.
+
+## Storage Architecture
+
+All objects are content-addressed using BLAKE3 hashing — faster than SHA-256, with tree-hashing mode for large inputs. Object types include blobs, tree objects (directory listings), snapshots, manifests (large file chunk references), deltas, tags, and branches.
+
+Local storage lives in platform-appropriate locations (not in the working directory). The server maintains per-tenant namespace isolation with configurable storage quotas. Pack files group objects for efficient transfer with delta compression. Garbage collection runs periodically, with grace periods before actual deletion.
+
+## Configuration Hierarchy
+
+Configuration follows a strict hierarchy: system defaults, user global config, root `.wt/config.toml`, tree `.wt-tree/config.toml`, subtree overrides, and environment variables (highest priority). Everything from snapshot intervals to sync behavior to rename detection thresholds is configurable at any level.
+
+The `.wt/` directory at the worktree root contains configuration, access rules, identity, hooks, reflog, and conflict metadata. Each tree's `.wt-tree/` directory holds tree-specific overrides. Both are version-controlled alongside the code.
+
+## Git Compatibility
+
+W0rktree speaks Git when needed. `wt init --from-git` imports a Git repository with full history. Live mirror mode keeps a W0rktree and a Git remote in bidirectional sync for gradual adoption. Developers on W0rktree use `wt` commands while developers still on Git use `git` commands — both see the same history.
+
+The goal is risk-free adoption. Try W0rktree on one team. If it works, expand. If it does not, the Git remote has everything.
+
+## Design Philosophy
+
+Every design decision in W0rktree follows six constraints enforced by the protocol:
+
+**One job per command.** No `checkout` that creates branches, switches branches, and restores files. `wt branch create`, `wt branch switch`, `wt restore` — each command does exactly one thing.
+
+**Plain terminology.** Snapshot, tree, switch, restore — words that mean what they say without requiring explanation of internal data structures.
+
+**Automatic by default.** Auto-snapshots, auto-sync, auto-merge for non-conflicting changes. The developer's job is to write code, not babysit version control.
+
+**Append-only history.** Enforced by the protocol, not by convention.
+
+**Non-destructive operations.** Soft deletes with recovery windows. A full reflog server-synced. Accidental data loss requires active effort.
+
+**Real-time collaboration.** Staged snapshot visibility is a core protocol feature, not an add-on.
+
+W0rktree is not the next version of Git. It is what comes after Git.

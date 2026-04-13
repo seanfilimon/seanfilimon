@@ -1,0 +1,268 @@
+---
+title: Declarative access control in W0rktree
+description: Define fine-grained, version-controlled access policies using TOML files that live alongside your code.
+author: Sean Filimon
+date: 2026-04-10
+difficulty: advanced
+tags:
+  - w0rktree
+  - security
+  - access-control
+---
+
+## Why access control belongs in version control
+
+Git has no built-in permissions model. Every enterprise bolts on a wrapper — GitHub, GitLab, Bitbucket all implement their own permission layers because the protocol does not support it. Permissions live in a web UI, disconnected from the code they protect, with no audit trail beyond platform-specific logs.
+
+W0rktree takes a different approach. Access control is defined in TOML files stored in `.wt/access/` and `.wt-tree/access/`, version-controlled alongside the code they protect. Changes to access rules go through the same review process as code changes. The full history of who changed what permissions and when is visible in the snapshot history.
+
+## Built-in roles
+
+W0rktree ships with five built-in roles in a strict superset hierarchy:
+
+| Role | Description |
+|---|---|
+| **Owner** | Full control. Cannot be restricted. |
+| **Admin** | Manages tenants, access, config. All permissions except owner-transfer. |
+| **Maintainer** | Manages branches and deployments. Can merge to protected branches. |
+| **Developer** | Standard development work. Read, write, snapshot, branch create. |
+| **Viewer** | Read-only across all scopes. |
+
+Every permission a Viewer has, a Developer also has. Every permission a Developer has, a Maintainer also has. This continues up the chain.
+
+Roles can be assigned at any scope level. A user can be a Developer at the tenant scope (all trees) but a Maintainer for a specific tree, and a Viewer on a specific branch of another tree. The most specific assignment wins.
+
+## Writing policies
+
+Policies are TOML files that bind subjects to permissions at scopes. They live in two locations:
+
+| Location | Scope |
+|---|---|
+| `.wt/access/policies.toml` | Root-level, applies to the entire worktree |
+| `.wt-tree/access/policies.toml` | Tree-level, applies to a specific tree |
+
+A policy has four parts: who (subjects), what (permissions), where (scope), and whether to allow or deny (effect).
+
+```toml
+[[policy]]
+name = "backend-team-dev-access"
+effect = "allow"
+subjects = [{ team = "backend-team" }]
+scope = "worktree"
+permissions = [
+    "tree:read",
+    "tree:write",
+    "branch:read",
+    "branch:create",
+    "snapshot:create",
+    "snapshot:read",
+    "sync:push",
+    "sync:pull",
+    "merge_request:create"
+]
+```
+
+Subjects can be accounts, teams, roles, tenants (by username or email), or all authenticated users:
+
+```toml
+subjects = [{ account = "alice" }]
+subjects = [{ team = "backend-team" }]
+subjects = [{ role = "Developer" }]
+subjects = [{ tenant = "partner-corp" }]
+subjects = [{ all_authenticated = true }]
+```
+
+## The scope hierarchy
+
+Scopes define where a permission applies. They form a strict hierarchy from broadest to most specific:
+
+```
+Global                           ← Server-wide (superadmin only)
+  └── Tenant                     ← All trees owned by a tenant
+       └── Tree                  ← An entire worktree
+            └── Branch           ← A specific branch
+                 └── RegisteredPath  ← A specific file/directory
+```
+
+The resolution rules are deterministic:
+
+1. **Most specific wins.** A policy at RegisteredPath overrides one at Branch.
+2. **Deny beats Allow.** At the same scope level, Deny always wins.
+3. **Inheritance.** If no policy exists at a specific scope, the parent scope applies.
+4. **Default Deny.** No matching policy at any level means the action is denied.
+
+## The permission ceiling model
+
+This is the most important architectural constraint in W0rktree's access system.
+
+Root-level policies in `.wt/access/` define the **maximum** permissions any entity can have. Tree-level policies in `.wt-tree/access/` can only **restrict** — they can never grant more than the root allows.
+
+If the root denies write access to a tenant, no tree can grant it. If a tree restricts a role to read-only, no subtree can grant write. The server enforces the ceiling on every sync.
+
+```toml
+# .wt/access/policies.toml — root ceiling
+[[policy]]
+name = "team-access"
+effect = "allow"
+subjects = [{ team = "dev-team" }]
+scope = "worktree"
+permissions = ["tree:read", "tree:write", "branch:create", "sync:push", "sync:pull"]
+```
+
+```toml
+# services/auth-service/.wt-tree/access/policies.toml — tree restriction
+[[policy]]
+name = "restrict-dev-team"
+effect = "deny"
+subjects = [{ team = "dev-team" }]
+scope = "tree"
+permissions = ["tree:write", "sync:push"]
+```
+
+Result: dev-team has `tree:read`, `branch:create`, and `sync:pull` in `auth-service`, but not `tree:write` or `sync:push`. The tree cannot grant anything the root did not.
+
+## Path-level restrictions
+
+For sensitive files, register the path in `.wt/config.toml` and write a scoped policy:
+
+```toml
+# .wt/config.toml
+[[registered_path]]
+path = "config/production.toml"
+description = "Production configuration — restricted access"
+```
+
+```toml
+# .wt/access/policies.toml
+[[policy]]
+name = "lock-production-config"
+effect = "deny"
+subjects = [{ role = "Developer" }, { role = "Viewer" }]
+scope = { path = "config/production.toml" }
+permissions = ["tree:write"]
+
+[[policy]]
+name = "allow-infra-team-production"
+effect = "allow"
+subjects = [{ team = "infra-team" }]
+scope = { path = "config/production.toml" }
+permissions = ["tree:read", "tree:write"]
+```
+
+The deny targets Developer and Viewer roles specifically, while infra-team members get explicit write access. Path registration is explicit — no globs — so every protected path is listed intentionally.
+
+## Cross-tenant access
+
+Tenants can grant access to other tenants, including organizations outside your own:
+
+```toml
+# .wt/config.toml
+[tenant_access.partner-org]
+  role = "reader"
+  trees = ["shared-api"]
+  expires = "2025-12-31T23:59:59Z"
+```
+
+For more complex scenarios, use the full policy system:
+
+```toml
+[[policy]]
+name = "contractor-write-access"
+effect = "allow"
+subjects = [{ tenant = "bob@contractor.io" }]
+scope = "worktree"
+permissions = [
+    "tree:read",
+    "tree:write",
+    "branch:read",
+    "branch:create",
+    "snapshot:create",
+    "snapshot:read",
+    "sync:push",
+    "sync:pull"
+]
+```
+
+Cross-tenant access is enforced by the server. The bgprocess includes tenant identity in every sync request, and the server validates every operation against the policies before allowing it.
+
+## Branch protection
+
+Branch protection rules are declarative and enforced server-side:
+
+```toml
+# .wt/config.toml
+[branch_protection.main]
+no_direct_push = true
+require_merge_review = true
+required_reviewers = 2
+no_delete = true
+require_ci_pass = true
+required_ci_checks = ["build", "test", "lint"]
+```
+
+Trees can add stricter protections but never weaken them. If the root requires 2 reviewers, a tree can require 3 but cannot require 1. The ceiling model applies here too.
+
+## Custom roles
+
+Beyond the five built-in roles, define custom roles in `.wt/access/roles.toml`:
+
+```toml
+[[role]]
+name = "code-reviewer"
+description = "Can read code and approve merge requests, but not write directly"
+permissions = [
+    "tree:read",
+    "branch:read",
+    "snapshot:read",
+    "sync:pull",
+    "merge_request:approve"
+]
+
+[[role]]
+name = "ci-bot"
+description = "Automated CI/CD service account"
+permissions = [
+    "tree:read",
+    "branch:read",
+    "snapshot:read",
+    "sync:pull",
+    "sync:push",
+    "tag:create",
+    "release:create"
+]
+```
+
+Custom roles are referenced in policies the same way as built-in roles.
+
+## Attribute-based conditions
+
+For context-sensitive access, add ABAC conditions to policies:
+
+```toml
+[[policy]]
+name = "business-hours-only"
+effect = "allow"
+subjects = [{ team = "contractors" }]
+scope = "worktree"
+permissions = ["tree:read", "tree:write", "sync:push", "sync:pull"]
+conditions = [
+    { attribute = "time.hour", operator = "GreaterThan", value = "8" },
+    { attribute = "time.hour", operator = "LessThan", value = "18" }
+]
+```
+
+Built-in attributes include time (hour, day, date), IP address and range, tenant plan and type, and tenant status. Custom attributes can be defined on tenant records and referenced in policies.
+
+All conditions are AND-evaluated: every condition must be true for the policy to apply.
+
+## How changes propagate
+
+When you modify an access file:
+
+1. The bgprocess detects the change and validates TOML syntax, permission names, and role references locally.
+2. On sync, the server validates tenant resolution, path registration, policy consistency, and whether you have `PolicyManage` permission.
+3. The server applies policies immediately.
+4. Other bgprocess clients sync the updated config.
+5. Policies take effect across all connected clients.
+
+Only users with `PolicyManage` or `TreeAdmin` permissions can modify access files. The server rejects sync operations that modify access files from unauthorized users.

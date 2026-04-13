@@ -1,0 +1,112 @@
+---
+title: "Virtual DOM: why design structure equals code structure"
+description: Every element on the Nokuva canvas is a VNode — a real HTML element, not a vector. Here is why that architectural decision changes everything about design-to-code workflows.
+author: Sean Filimon
+date: 2026-04-11
+tags:
+  - nokuva
+  - virtual-dom
+  - architecture
+  - engineering
+---
+
+## The translation layer problem
+
+Every design tool ships with an implicit promise: what you design here will become code over there. The gap between "here" and "there" is where projects lose weeks.
+
+Traditional design tools represent UI as vectors. Rectangles, ellipses, lines, text nodes — geometric primitives rendered to a canvas. These primitives look like UI but they are not UI. A rectangle with rounded corners and a text label inside it is not a button. It is a rectangle with text. The developer looks at it, recognizes the intent, and rebuilds it as an actual `<button>` element with padding, font properties, border radius, and event handlers.
+
+That interpretation step is the translation layer. It is where fidelity degrades, where assumptions diverge, and where "pixel-perfect" becomes a running joke between design and engineering.
+
+## VNodes: the design primitive that is also the code primitive
+
+Nokuva does not use vectors. Every element on the canvas is a VNode — a lightweight, JSON-serializable object that represents a real HTML element.
+
+```json
+{
+  "id": "node_k29x",
+  "type": "button",
+  "props": {
+    "className": "cta-primary"
+  },
+  "styles": {
+    "backgroundColor": "var(--primary-600)",
+    "color": "var(--neutral-50)",
+    "paddingInline": "var(--spacing-6)",
+    "paddingBlock": "var(--spacing-3)",
+    "borderRadius": "var(--radius-md)",
+    "fontSize": "var(--text-base)",
+    "fontWeight": "var(--font-semibold)"
+  },
+  "children": [
+    {
+      "id": "node_m83p",
+      "type": "span",
+      "children": "Start designing"
+    }
+  ],
+  "meta": {
+    "tokens": ["primary-600", "neutral-50", "spacing-6", "spacing-3", "radius-md"],
+    "tailwind": ["bg-primary-600", "text-neutral-50", "px-6", "py-3", "rounded-md", "text-base", "font-semibold"]
+  }
+}
+```
+
+That button on the canvas is a `<button>` in the VNode tree. Not a rectangle that looks like a button. A button. With semantic HTML type, design token references in its styles, Tailwind class mappings in its meta, and children that are the actual content hierarchy.
+
+## The 40+ element primitives
+
+The VNode system supports every HTML element a designer would use to build production UI:
+
+| Category | Elements |
+|---|---|
+| Layout | `div`, `section`, `header`, `footer`, `main`, `aside`, `nav`, `article` |
+| Typography | `h1`-`h6`, `p`, `span`, `blockquote`, `code`, `pre` |
+| Forms | `input`, `select`, `textarea`, `button`, `label`, `form` |
+| Media | `img`, `video`, `svg`, `figure`, `figcaption` |
+| Interactive | `a`, `details`, `summary`, `dialog` |
+| Lists | `ul`, `ol`, `li` |
+
+When a designer places a heading on the canvas, it is an `h1` or `h2` — not a text node with a large font size. When they build a navigation, it is a `nav` element containing `a` elements — not a horizontal rectangle with clickable text boxes.
+
+This semantic fidelity means accessibility is structural. A screen reader does not need ARIA hints to understand that the navigation is a navigation. The HTML says so.
+
+## Why JSON serialization changes the game
+
+Every VNode is JSON-serializable. The entire canvas — every frame, every element, every style, every token reference — can be represented as a single JSON document.
+
+**Version control becomes trivial.** Save the canvas state, diff it against the previous version, see exactly what changed. Not a binary blob comparison. A structured diff that says "the hero heading changed from `h1` to `h2` and the padding increased from `spacing-4` to `spacing-6`."
+
+**AI operates in its native medium.** Large language models are exceptionally good at structured JSON generation. When the multi-agent system generates a design, it produces VNodes — the same format the canvas renders. There is no intermediate representation. No "AI generates description, parser converts to canvas format." The AI output is the canvas format.
+
+**Collaboration becomes granular.** SpacetimeDB stores VNodes as database rows. When a team member moves an element, the database updates that node's position field. Other subscribers receive the delta for that specific node. Not a re-serialized canvas. Not a full-frame update. One node, one field, one update.
+
+## The meta layer
+
+Each VNode carries a `meta` object that bridges the design world and the code world simultaneously:
+
+**Design tokens** — the `tokens` array lists every token referenced by the node's styles. When the theme editor changes a token value, the canvas knows exactly which nodes to re-render. No full-canvas repaint. Targeted updates.
+
+**Tailwind classes** — the `tailwind` array contains the equivalent Tailwind CSS classes for the node's current styles. These are computed live as styles change. When you adjust padding in the inspector, the Tailwind mapping updates in real-time. Code export can use either raw CSS with token variables or Tailwind utility classes.
+
+**Component membership** — nodes can be grouped into reusable components with their own props interface. A "PricingCard" component is a subtree of VNodes with configurable slots. The component boundary is metadata, not a different data structure.
+
+## Pluggable extensions
+
+The VNode system supports extensions that enhance rendering and resolution without changing the core data model:
+
+- **Tailwind CSS resolution** — resolves utility classes to computed styles for canvas rendering
+- **Icon libraries** — 10,000+ icons from Material Design, Heroicons, Feather, Font Awesome, Ionicons, Ant Design, and more, all rendered as SVG VNodes
+- **Google Fonts** — 250+ fonts with fuzzy search and auto-loading, resolved to `@font-face` declarations at render time
+- **Design token resolution** — resolves `var(--token-name)` references to computed values for visual rendering while preserving the token reference in the data
+- **Interactive state management** — hover, focus, active, and disabled states stored as VNode variants, toggled on the canvas for preview
+
+Each extension is a pure function: VNode in, enhanced VNode out. The core data model stays clean. The rendered canvas shows the resolved result. The serialized output preserves the references.
+
+## The handoff that is not a handoff
+
+When a Nokuva design is ready for code, there is no handoff. The VNode tree is the code foundation. The conversion process reads the tree, resolves token references to the chosen output format (CSS custom properties, Tailwind utilities, or both), and produces component code that structurally mirrors the canvas.
+
+A three-column pricing section on the canvas becomes a three-column pricing section in code. Not because a code generator interpreted a screenshot. Because the data structure is the same in both environments.
+
+What you see on the canvas is exactly what developers get. Not approximately. Exactly.

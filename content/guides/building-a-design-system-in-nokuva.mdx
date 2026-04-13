@@ -1,0 +1,176 @@
+---
+title: Building a design system in Nokuva
+description: How to create, manage, and scale a design token system using Nokuva's Theme Editor — from color palettes to typography scales to spacing rhythm.
+author: Sean Filimon
+date: 2026-04-12
+difficulty: intermediate
+tags:
+  - nokuva
+  - design-system
+  - design-tokens
+  - guide
+---
+
+## Why build a system
+
+A design system is the difference between a product that scales consistently and one that accumulates visual debt with every feature. Without tokens, the third developer to build a card component picks their own padding, their own border radius, their own shadow. By sprint ten, the application has 40 unique spacing values when it needs 12.
+
+Nokuva's design system is not an export feature added at the end. It is the foundation. Tokens are created alongside the first design and govern every element from day one.
+
+## Opening the Theme Editor
+
+The Theme Editor is a panel on the right side of the interface, tabbed alongside the Inspector. Click the palette icon or press `T` to switch to it.
+
+The Theme Editor has five sections: Colors, Typography, Spacing, Shadows, and Radii. Each section shows the current token values with live previews. Changes made here propagate instantly across every element on the canvas that references the affected tokens.
+
+## Colors
+
+### Generating a palette
+
+Start with a seed color — the primary brand color. Enter a hex value or use the oklch picker for perceptual accuracy. Nokuva generates the full scale:
+
+| Token | Purpose |
+|---|---|
+| `primary-50` | Lightest tint, backgrounds |
+| `primary-100` | Light backgrounds, subtle highlights |
+| `primary-200` | Borders, light accents |
+| `primary-300` | Hover states on light backgrounds |
+| `primary-400` | Secondary emphasis |
+| `primary-500` | Default state for mid-weight elements |
+| `primary-600` | Primary buttons, strong emphasis |
+| `primary-700` | Hover state for primary buttons |
+| `primary-800` | Active state, pressed buttons |
+| `primary-900` | Dark text on light backgrounds |
+| `primary-950` | Darkest shade, near-black variant |
+
+The scale is generated in oklch color space, ensuring perceptual uniformity. Each step looks like the same visual jump to the human eye.
+
+### Secondary and accent palettes
+
+Add secondary and accent palettes using the same workflow. The Theme Agent can derive complementary palettes from the primary seed, or you can specify each seed independently.
+
+Common patterns:
+- **Complementary**: secondary is the hue complement of primary
+- **Analogous**: secondary and accent are adjacent hues
+- **Split-complementary**: secondary and accent flank the complement
+
+### Semantic colors
+
+Semantic tokens map to intent rather than appearance:
+
+- `success` — confirmations, completed states (typically green-derived)
+- `warning` — caution states, approaching limits (typically amber-derived)
+- `error` — failures, destructive actions (typically red-derived)
+- `info` — informational callouts, tips (typically blue-derived)
+
+Each semantic color has light and dark variants for backgrounds and foregrounds.
+
+### Dark mode
+
+Toggle dark mode in the Theme Editor to see and edit the dark palette. Nokuva generates dark mode variants automatically from the light palette, inverting the scale (primary-900 in dark mode serves the role primary-100 serves in light) and adjusting contrast ratios.
+
+Override any auto-generated dark mode value by clicking the token and entering a custom value. The override persists alongside the auto-generated palette.
+
+## Typography
+
+### Font selection
+
+Search 250+ Google Fonts from the Typography section. The search is fuzzy — typing "inter" finds Inter, typing "mono" shows all monospace options. Click a font to preview it live on the canvas.
+
+Set separate fonts for headings and body text. Common pairings:
+- Display + body: a distinctive heading font with a neutral body font
+- Single family: the same font at different weights for cohesion
+- Serif + sans: contrast between headings and body for editorial layouts
+
+### Type scale
+
+The type scale is generated from a base size and a ratio:
+
+| Ratio | Name | Character |
+|---|---|---|
+| 1.125 | Major second | Compact, dense interfaces |
+| 1.200 | Minor third | Balanced, general purpose |
+| 1.250 | Major third | Clear hierarchy, standard |
+| 1.333 | Perfect fourth | Editorial, marketing |
+| 1.500 | Perfect fifth | Dramatic, presentation |
+
+Set the base size (typically 16px) and the ratio. The scale generates named tokens:
+
+- `text-xs` through `text-6xl` — sizes ascending from the base
+- Each size includes a default line height and letter spacing
+
+Preview the entire scale in the Theme Editor to verify that each step creates sufficient visual distinction without becoming too large at the top end.
+
+### Weight scale
+
+Map font weights to named tokens: `font-light` (300), `font-normal` (400), `font-medium` (500), `font-semibold` (600), `font-bold` (700). Not every font supports every weight — the Theme Editor shows available weights for the selected fonts.
+
+## Spacing
+
+### The base unit
+
+Set a base spacing unit. The most common value is 4px, which generates a scale where every value is a multiple of 4:
+
+```
+spacing-1:  4px    spacing-8:  32px
+spacing-2:  8px    spacing-10: 40px
+spacing-3:  12px   spacing-12: 48px
+spacing-4:  16px   spacing-16: 64px
+spacing-5:  20px   spacing-20: 80px
+spacing-6:  24px   spacing-24: 96px
+```
+
+Some teams prefer an 8px base for a sparser scale (8, 16, 24, 32, 40, 48, 64, 80, 96). The Theme Editor regenerates the scale instantly when you change the base.
+
+### Applying spacing tokens
+
+In the Inspector, spacing properties (padding, margin, gap) show a dropdown of available spacing tokens. Select from the scale instead of typing a pixel value. If you type a literal value that matches a token (e.g., typing "16" when `spacing-4` is 16px), Nokuva offers to convert it to the token reference.
+
+This nudge toward tokens is intentional. Literal values are allowed but tokens are the default path.
+
+## Shadows and elevation
+
+### Defining shadow tokens
+
+The Shadows section defines four elevation levels:
+
+- **shadow-sm**: offset-y 1px, blur 2px — subtle depth for cards and inputs
+- **shadow-md**: offset-y 4px, blur 6px — moderate elevation for dropdowns
+- **shadow-lg**: offset-y 10px, blur 15px — prominent elevation for modals
+- **shadow-xl**: offset-y 20px, blur 25px — maximum elevation for overlays
+
+Each shadow token also defines a color (typically a translucent black or, in dark mode, a translucent dark color). Adjust blur, spread, offset, and color from the Theme Editor with live preview.
+
+### Elevation as a system
+
+Consistent elevation means users develop spatial intuition about your interface. Cards at shadow-sm feel grounded. Dropdowns at shadow-md feel elevated above the card. Modals at shadow-lg feel elevated above everything. When elevation is consistent, depth becomes meaningful instead of decorative.
+
+## Border radius
+
+Four tokens cover the common cases:
+
+- `radius-sm` — subtle rounding (e.g., 4px) for inputs and small elements
+- `radius-md` — standard rounding (e.g., 8px) for cards and buttons
+- `radius-lg` — prominent rounding (e.g., 16px) for large containers and modals
+- `radius-full` — pill shape (9999px) for tags, badges, and rounded buttons
+
+Set each value in the Theme Editor. Every element referencing a radius token updates instantly.
+
+## Reusable components
+
+Beyond tokens, the design system includes reusable components. Select a group of elements on the canvas and create a component. The component appears in the component library with configurable slots — areas where content varies between instances.
+
+A "PricingCard" component might have slots for the tier name, price, feature list, and CTA button text. Each instance on the canvas uses the same structure and tokens but different content.
+
+Editing the component definition updates every instance. This is the same principle as token propagation applied to structure instead of values.
+
+## Scaling the system
+
+A design system built in Nokuva scales because every decision is centralized:
+
+- Change a color: one token edit, every element updates
+- Change a font: one selection, every heading and paragraph updates
+- Change spacing: one base unit adjustment, every layout reflows
+- Change a component: one edit, every instance updates
+
+The cost of a brand refresh, a theme adjustment, or a system-wide spacing change does not scale with the number of pages. It is always one edit. That is the compound value of building a system from day one.

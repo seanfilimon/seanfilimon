@@ -1,0 +1,108 @@
+---
+title: "Real-time collaboration at database speed: SpacetimeDB vs. WebSocket relay"
+description: Most collaborative tools relay messages through WebSocket servers. Nokuva uses an in-memory relational database as the collaboration engine. Here is why and what it enables.
+author: Sean Filimon
+date: 2026-04-07
+tags:
+  - nokuva
+  - spacetimedb
+  - collaboration
+  - architecture
+---
+
+## The relay model
+
+The standard architecture for real-time collaboration looks like this:
+
+```
+Client A → WebSocket → Relay Server → WebSocket → Client B
+```
+
+Client A makes a change. The change is serialized into a message. The message travels over a WebSocket connection to a relay server. The relay server broadcasts the message to all other connected clients. Client B receives the message, deserializes it, and applies the change locally.
+
+This works. It has powered collaborative tools for over a decade. But it has structural limitations that become visible at scale:
+
+**Conflict resolution is a separate system.** The relay server passes messages. When two clients edit the same element simultaneously, something else — operational transforms, CRDTs, or last-write-wins logic — has to resolve the conflict. This resolution system is bolted onto the relay, not built into it.
+
+**Granularity is coarse.** Most relay-based systems serialize entire objects or frames as the unit of change. Move a button and the message might contain the entire frame state, not just the button's new position. The receiving client re-renders the full frame to apply the change.
+
+**Undo/redo is client-local.** Each client maintains its own operation history. Collaborative undo — undoing your changes without affecting someone else's — requires additional bookkeeping layered on top of the relay.
+
+**Presence is a polling mechanism.** "Is this user online?" is answered by periodic heartbeat messages. The relay server tracks when it last heard from each client and marks them as away after a timeout.
+
+## The database model
+
+Nokuva replaces the relay server with SpacetimeDB — an in-memory relational database with built-in real-time subscriptions.
+
+```
+Client A → Database Write → SpacetimeDB → Subscription Push → Client B
+```
+
+The difference is not cosmetic. Every canvas change is a database operation — an `INSERT`, `UPDATE`, or `DELETE` on a row in a table. Every connected client subscribes to the tables they care about. When a row changes, the database pushes the delta to all subscribers. There is no relay. There is no message broker. The database is the collaboration engine.
+
+## What this enables
+
+### Per-node granular updates
+
+Every VNode on the canvas is a row in a SpacetimeDB table. When you move a button from position (100, 200) to (150, 250), the database updates that node's position fields. Subscribers receive the delta for that specific node — two numbers changed on one row.
+
+Compare this with a relay model that serializes the entire frame: every node's position, style, children, and metadata, transmitted and deserialized by every client, even though only one node moved.
+
+The difference is negligible for a canvas with 20 elements. For a canvas with 2,000 elements across multiple frames, per-node updates are the difference between real-time and "real-time with visible lag."
+
+### Live cursors at database latency
+
+Each user's cursor position and selection state is a row in a `cursors` table. Moving your cursor updates the row. Other clients subscribe to the cursors table and render the positions they receive.
+
+The latency is database write plus subscription push. No WebSocket round-trip to a relay server. No serialization of the full cursor state. One row, two fields (x, y), pushed to subscribers at the speed of an in-memory database.
+
+### Collaborative undo/redo
+
+Each user's operations are stored in an `operations` table with a user ID and a causal ordering. When you undo, the database reverses your most recent operation. Other users' operations are unaffected.
+
+This is not special logic layered on top of a relay. It is a database query: "find the most recent operation by user X and apply its inverse." The database maintains the causal ordering. Undo and redo are reads and writes, not algorithmic complexity bolted onto a message system.
+
+### Advisory node locking
+
+Select a text element to edit its content and the database sets a `locked_by` field on that node's row. Every subscriber sees the lock indicator in real-time. Release the selection and the field clears.
+
+This is not a hard lock — other users can still select and edit the node if they choose. It is an advisory signal: "someone is working on this." Enough to prevent accidental concurrent edits. Not enough to block deliberate parallel work.
+
+The lock is a database field, not a distributed lock protocol. It has the consistency guarantees of the database and the latency of an in-memory write.
+
+### Presence detection
+
+Each connected user has a row in a `presence` table with fields for status (active, idle, away), last activity timestamp, and current view (which frame, what zoom level). The database updates the status based on activity. Subscribers render the presence indicators.
+
+No polling. No heartbeat messages. No timeout-based guessing. The database knows the state. Subscribers know the state. The latency between a user going idle and every other user seeing the idle indicator is the latency of a database update.
+
+## The dual-database architecture
+
+SpacetimeDB excels at real-time state: canvas nodes, cursor positions, presence, operations. It is an in-memory database — fast, reactive, purpose-built for live collaboration.
+
+But not all data belongs in an in-memory database. Authentication tokens, billing records, account settings, audit logs, and asset metadata are durable data that needs the guarantees of a traditional database.
+
+Nokuva uses a dual-database architecture:
+
+| Data | Database | Reason |
+|---|---|---|
+| Canvas nodes and state | SpacetimeDB | Real-time subscriptions, per-node granularity |
+| Cursor positions | SpacetimeDB | Sub-millisecond update latency |
+| Operation history | SpacetimeDB | Causal ordering for collaborative undo |
+| Presence and locking | SpacetimeDB | Instant status propagation |
+| Authentication | PostgreSQL | ACID guarantees for security-critical data |
+| Billing and accounts | PostgreSQL | Transactional consistency for financial data |
+| Audit logs | PostgreSQL | Append-only durability for compliance |
+| Asset storage metadata | PostgreSQL | Referential integrity with external storage |
+
+Each database handles what it is good at. SpacetimeDB handles the hot path — the data that changes every second and needs to reach every client instantly. PostgreSQL handles the durable path — the data that changes rarely and needs to be correct forever.
+
+## The cost of the relay model
+
+When collaborative features are built on WebSocket relay, each new feature requires its own message type, its own serialization format, its own conflict resolution strategy, and its own undo/redo logic. Adding cursor sharing is a project. Adding presence is another project. Adding node locking is another.
+
+When collaborative features are built on a database, each new feature is a table and a subscription. Cursors are a table. Presence is a table. Locks are a field on the nodes table. The subscription infrastructure is the same for all of them.
+
+The relay model has linear complexity growth per feature. The database model has constant infrastructure cost with table-level feature additions. At five collaborative features, the difference in engineering complexity is significant. At twenty, it is decisive.
+
+Real-time collaboration at database speed is not a tagline. It is an architectural choice that makes every collaborative feature cheaper to build and faster to deliver.

@@ -1,0 +1,108 @@
+---
+title: "Multi-agent AI: why one model doing everything produces mediocre results"
+description: Nokuva uses six specialized agents instead of one generalist model. Here is the architecture, the reasoning, and why specialization beats generalization in AI-assisted design.
+author: Sean Filimon
+date: 2026-04-09
+tags:
+  - nokuva
+  - ai
+  - multi-agent
+  - architecture
+---
+
+## The generalist failure mode
+
+Ask a single AI model to generate a complete landing page. You will get a landing page. It will have a hero section, some feature cards, maybe a testimonial block. The layout will be structurally sound. The typography will be readable. The colors will not clash.
+
+And it will look like every other AI-generated landing page.
+
+The failure mode of generalist AI is not incompetence — it is mediocrity. The model optimizes for the safest average across all design decisions simultaneously. Color choices converge toward the same handful of palettes the training data over-represents. Typography defaults to system fonts or the three most popular Google Fonts. Spacing is uniform because uniform spacing is never wrong, even when it is never excellent.
+
+This is the single-model ceiling. Good enough across the board. Exceptional at nothing.
+
+## How design teams actually work
+
+A senior design team does not have one person making every decision simultaneously. The process has layers:
+
+1. **Intent and planning.** What is this page for? What is the hierarchy of information? What actions should the user take? A design director or product designer scopes the problem.
+2. **Visual foundation.** What is the color system? What is the brand tone — warm, cool, energetic, restrained? A visual designer or brand designer establishes the palette and mood.
+3. **Typography and rhythm.** What is the type scale? What font pairing balances personality with readability? How does the spacing system create visual rhythm? A typographer or design system specialist defines the rules.
+4. **Layout and structure.** Given the color system, type scale, and spacing rules, how do the components arrange on the page? A UI designer builds the layout within the constraints the previous steps established.
+5. **Code output.** When the design is finalized, a design engineer or frontend developer converts it to production code.
+
+Each step has focused context. The typographer does not agonize over color. The layout designer does not reinvent the spacing system. Each role accepts constraints from the previous step and focuses entirely on its domain.
+
+## Six agents, six roles
+
+Nokuva's multi-agent architecture mirrors this division:
+
+### The Orchestrator
+
+The entry point. Receives the user's natural language input — "A SaaS pricing page with three tiers, dark theme, gradient accents" — and decomposes it into structured tasks.
+
+The Orchestrator does not generate designs. It understands intent, identifies which agents are needed, determines the execution order, and delegates. A pricing page with a dark theme triggers the Theme Agent for a dark palette with gradient tokens, the Spec Agent for marketing-appropriate typography, and the Frame Builder for a three-column tier layout. A simple button component might only need the Frame Builder with the existing theme.
+
+### The Plan Agent
+
+Before any canvas work begins, the Plan Agent produces a structured blueprint. This is a JSON specification that describes the components, their hierarchy, their content structure, and their relationship to each other.
+
+The blueprint prevents the most common AI generation failure: diving into output without planning. A pricing page generated without a plan might produce three identical cards with no visual hierarchy between tiers. The plan establishes that the middle tier is featured, the CTA buttons have different visual weights, and the price typography is the dominant element — before a single VNode is created.
+
+### The Design Theme Agent
+
+Builds complete color systems. Not "here is a blue" but a full token hierarchy:
+
+- Primary palette: 50 through 950 in oklch color space for perceptual uniformity
+- Secondary and accent palettes with the same scale
+- Neutral palette for text, borders, and backgrounds
+- Semantic colors: success, warning, error, info
+- Dark mode variants with proper contrast ratios
+- Gradient tokens when requested
+
+The Theme Agent outputs design tokens, not CSS. The tokens are format-agnostic — they resolve to CSS custom properties, Tailwind colors, or any other format at export time.
+
+### The Design Spec Agent
+
+Handles typography and spacing. Selects fonts from 250+ Google Fonts based on the design intent (a SaaS marketing page gets different typography than a dashboard). Generates a type scale using configurable ratios — major third (1.25) for compact interfaces, perfect fourth (1.333) for editorial, or custom ratios.
+
+Spacing follows the same principle: a base unit (typically 4px) generates a consistent scale. The Spec Agent defines which scale values map to semantic names — `spacing-1` through `spacing-20` — and sets guidelines for padding, gap, and margin usage.
+
+Shadows and elevation round out the spec. A three-tier elevation system (sm, md, lg, xl) with consistent blur, spread, and offset values that respect the color palette's tone.
+
+### The Frame Builder Agent
+
+The constructor. Consumes the theme tokens and spec tokens as constraints, then builds the actual VNode tree on the canvas.
+
+The Frame Builder is the only agent that creates canvas elements. It works within the design system the previous agents established, which means it cannot introduce a rogue color value or an off-system spacing unit. The constraints are architectural, not advisory.
+
+This is where component hierarchy gets built. A pricing section is not a flat group of elements — it is a `section` containing a heading group, a `div` with CSS grid for the tier cards, and each card is a structured subtree with header, price, feature list, and CTA button. The semantic HTML structure is intentional, not coincidental.
+
+### The UI Agent
+
+The final agent in the pipeline, invoked when the design is ready for code conversion. The UI Agent reads the perfected VNode tree with all resolved tokens and produces clean, tokenized component code.
+
+The UI Agent does not re-generate from the original prompt. It converts from the canvas state. Every refinement the designer made — the adjusted padding, the swapped color, the restructured hierarchy — is in the VNode tree and therefore in the code output. The code reflects the design as it is, not as it was first generated.
+
+## The coordination protocol
+
+Agents do not run in isolation. The Orchestrator manages a structured pipeline:
+
+1. User input is decomposed into tasks
+2. The Plan Agent produces a blueprint
+3. The Theme Agent and Spec Agent run in parallel (they do not depend on each other)
+4. The Frame Builder receives both the theme and spec as input constraints
+5. The canvas renders the result
+6. The user refines visually
+7. When ready, the UI Agent converts the final state
+
+Steps 3 and 4 are the key optimization. Color and typography are independent design decisions — they can be made in parallel. The Frame Builder needs both as input, so it waits. This parallelism is why generation feels fast despite involving multiple agents.
+
+## Specialization over generalization
+
+The multi-agent approach has a structural advantage that compounds over time: each agent can be improved independently.
+
+When the color generation quality needs improvement, only the Theme Agent is updated. The Spec Agent, Frame Builder, and UI Agent are unaffected. When a new component pattern is needed, only the Frame Builder and Plan Agent need updates. When a new code output format is added, only the UI Agent changes.
+
+In a single-model system, improving color generation means retraining or re-prompting the entire model, with unpredictable effects on layout, typography, and code output. Every improvement risks a regression in an unrelated domain.
+
+One AI doing everything produces mediocre results across the board. Six AIs, each doing one thing well, produce results that are excellent in every domain. That is not a philosophical claim. It is an architectural one.

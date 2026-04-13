@@ -1,0 +1,78 @@
+---
+title: Why Git needs a successor
+description: Git was designed for 2005. Here is why patching it is not enough and what a modern version control system actually requires.
+author: Sean Filimon
+date: 2026-03-15
+tags:
+  - w0rktree
+  - version-control
+  - engineering
+---
+
+## Git was designed for the Linux kernel
+
+In 2005, Linus Torvalds built Git to solve a specific problem: tracking the Linux kernel source after the BitKeeper license was revoked. It was fast, distributed, and content-addressed. It was brilliant software for its time.
+
+Two decades later, every engineering team on the planet uses it — not because Git is good at what they need, but because nothing better existed.
+
+## The problems are not bugs
+
+Git's limitations are fundamental design decisions that cannot be fixed without replacing the system.
+
+### No organization model
+
+Git has no concept of tenants, teams, or ownership. A repository is a bag of files with a history. Everything else — access control, team structure, visibility — is bolted on externally by platforms like GitHub, GitLab, and Bitbucket. Each platform implements its own permission model, its own team structure, its own visibility rules. None of it is portable.
+
+### No real-time collaboration
+
+You cannot see what your teammates are working on until they push. There is no work-in-progress visibility, no staged activity feed, nothing. Two developers can spend a week modifying the same function on different branches and only discover the collision when they try to merge.
+
+Teams compensate with standups, Slack messages, and ticket systems. All because the version control system provides zero in-flight visibility.
+
+### Destructive by design
+
+`git rebase`, `git reset --hard`, `git push --force` — Git allows and encourages history rewriting. These commands are deeply embedded in the culture and tooling. "Clean up your branch before merging" is standard advice that requires destructive operations.
+
+Data loss is one bad command away. Every team has a story about someone who force-pushed to main. The reflog exists as a safety net, but it is local-only and expires.
+
+### No access control
+
+Git has no built-in permissions model. File-level access, branch protection, path restrictions — all require external tooling. If you can clone the repo, you can read every file. Every enterprise wraps Git in a platform that implements its own access layer because the protocol does not support it.
+
+### Large files are an afterthought
+
+Large files require Git LFS — a separate system with its own server, its own protocol, its own failure modes, its own bandwidth quotas, and its own tracking configuration. You have to install an extension, configure `.gitattributes` patterns, and set up LFS storage. It is a parallel system bolted onto Git because Git's content model cannot handle large files natively.
+
+### The command surface is hostile
+
+`rebase --onto`, `reset --soft`, `checkout -b`, `cherry-pick` — Git exposes its internal plumbing as the user interface. The `checkout` command creates branches, switches branches, and restores files depending on which flags you pass. There are over 150 commands, many overloaded with multiple behaviors.
+
+Every Git command requires understanding the object model. The learning curve is not a skill issue — it is a design issue.
+
+## What cannot be patched
+
+Some of these problems could theoretically be addressed with extensions or wrappers. But the fundamental ones cannot:
+
+**Identity.** Git has no concept of verified users. Author names and emails are unverified strings in a config file. Adding a real identity system would break every existing workflow.
+
+**Access control.** Adding native access control would require a server component. Git is architecturally a local tool that optionally talks to a remote. It was designed to avoid requiring a server.
+
+**History immutability.** Rebase, reset, and force-push are deeply embedded in Git's culture. Making history append-only would break existing workflows and every tool built around interactive rebase.
+
+**Collaboration visibility.** Sharing work-in-progress without pushing to a branch requires a server-side concept of staged work. Git has no mechanism for this, and adding one would require changing the protocol.
+
+## What a modern VCS requires
+
+A version control system designed for 2026 should have:
+
+- **Multi-tenant architecture** — users and organizations are first-class entities with verified identity and cross-tenant access controls
+- **Real-time collaboration** — teams see what everyone is working on without requiring a push
+- **Append-only history** — no rebase, no force-push, no accidental data loss
+- **Declarative access control** — version-controlled, auditable, enforced by the server
+- **Native large file handling** — no separate system, no configuration, no extensions
+- **Plain terminology** — commands that do one thing, named in plain language
+- **File-level license compliance** — per-path SPDX tracking enforced on every sync
+
+This is not a wish list. This is what we built with W0rktree.
+
+Git is not bad software. It was great software for 2005. But the problems it cannot solve are exactly the problems that matter most in 2026, and they are baked into its architecture too deeply to patch.

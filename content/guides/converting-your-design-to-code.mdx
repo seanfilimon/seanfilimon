@@ -1,0 +1,121 @@
+---
+title: Converting your design to production-ready code
+description: How Nokuva converts perfected designs into clean, tokenized code — and why designing first produces better output than generating code directly.
+author: Sean Filimon
+date: 2026-04-11
+difficulty: intermediate
+tags:
+  - nokuva
+  - code-export
+  - design-to-code
+  - guide
+---
+
+## The conversion, not generation
+
+Nokuva does not generate code from your original prompt. It converts code from your perfected design.
+
+This distinction is the core of the workflow. A prompt-to-code tool takes your description, passes it through a model, and outputs code. Every ambiguity in the prompt becomes a guess in the code. Every refinement means re-prompting, which means re-generating, which means the model makes different guesses on the parts you did not change.
+
+Nokuva's code output reads the VNode tree — the exact structure rendered on your canvas — and converts it to component code. Every change you made visually is captured in the tree. The adjusted padding, the swapped color token, the restructured layout, the reordered layers — all present in the output. No re-generation. No prompt interpretation. A direct conversion.
+
+## When to convert
+
+Convert when the design is done. That sounds obvious, but the temptation to convert early is real. Resist it.
+
+The entire value of the design phase is that iteration is cheap. Moving an element on the canvas takes a second. Changing a token value takes a click. Getting stakeholder feedback on a visual artifact takes a meeting. Each of these costs minutes.
+
+The same iterations in code cost hours. Moving an element means finding the component, understanding its layout context, making the change, and verifying nothing broke. Changing a color means finding every instance or updating the token in the codebase. Getting stakeholder feedback on a deployed build means a sprint cycle.
+
+Convert after:
+
+- **Layout is finalized.** The page structure, component hierarchy, and responsive behavior are decided.
+- **Design system is complete.** All tokens are named, scaled, and applied. No literal values remain where tokens should be.
+- **Stakeholders have approved.** Everyone who needs to see the design has seen it and signed off. Changes after conversion cost engineering hours, not design minutes.
+- **Component structure is clean.** Reusable components are defined with proper slots. The layer tree is organized. No orphaned elements or unnamed groups.
+
+## The conversion process
+
+### Step 1 — Select the scope
+
+Choose what to convert: a single frame, multiple frames, or the entire project. For most workflows, converting one page or screen at a time is practical. The code output is self-contained for each frame.
+
+### Step 2 — Choose the output format
+
+Nokuva supports multiple output modes:
+
+**CSS custom properties** — design tokens export as CSS variables (`--primary-600`, `--spacing-4`). Styles reference these variables. The component code is framework-agnostic HTML and CSS.
+
+**Tailwind CSS utilities** — styles export as Tailwind utility classes. Token values map to Tailwind theme configuration. The component code uses Tailwind's class-based approach.
+
+**Both** — CSS custom properties for the token system plus Tailwind utilities for element styling. A hybrid approach that works with Tailwind projects that also maintain a custom property layer.
+
+### Step 3 — Review the output
+
+The conversion produces component code that structurally mirrors the canvas. A three-column pricing section on the canvas becomes a three-column pricing section in code. The same nesting, the same HTML elements, the same token references.
+
+Review the output for:
+
+- **Token coverage** — every style should reference a token, not a literal value. If you see a raw hex color or a pixel value, go back to the canvas and replace it with a token.
+- **Semantic HTML** — headings should be `h1`-`h6`, navigation should be in `nav`, main content in `main`. If the canvas uses the right elements, the code will too.
+- **Component boundaries** — reusable sections should be separate components. If the pricing card appears three times, it should be one component with different props, not three duplicated blocks.
+
+### Step 4 — Integrate
+
+The converted code is designed to drop into an existing project. The token system exports as a standalone file (CSS custom properties or Tailwind theme config) that integrates with your project's existing style infrastructure.
+
+For new projects, the token file becomes the design system foundation. For existing projects, map Nokuva's token names to your existing token names during export, or adopt Nokuva's naming and update references incrementally.
+
+## What makes the output clean
+
+### No regeneration bloat
+
+Prompt-to-code tools accumulate bloat through iteration. Each re-prompt generates a full page of code. If you re-prompt ten times to get the design right, the model has generated ten complete pages — and the final output carries the stylistic inconsistencies of being the tenth attempt rather than a single intentional design.
+
+Nokuva converts once from a single, perfected design state. There is no iteration history in the output. No residual styles from attempt three. No conflicting patterns from attempt seven. One design, one conversion, one output.
+
+### Token references, not inline values
+
+Every style in the output references a design token. The button's background is `var(--primary-600)`, not `#2563eb`. The card's padding is `var(--spacing-6)`, not `24px`. This means:
+
+- Changing the primary color in the codebase updates every element that uses it
+- The design system is portable — swap the token values and the entire theme changes
+- Consistency is enforced by the token references, not by developer discipline
+
+### Structural fidelity
+
+The VNode tree on the canvas has the same structure as the component tree in code. A `section` containing a `div` with `display: grid` containing three card components on the canvas becomes exactly that in code. The conversion is a serialization, not an interpretation.
+
+This means designers can verify the code structure by looking at their layer tree. If the layer tree is organized — proper nesting, semantic elements, named groups — the code will be organized. If the layer tree is messy, the code will be messy. The canvas is the preview and the source of truth simultaneously.
+
+## Code quality checklist
+
+Before integrating converted code, verify:
+
+| Check | What to look for |
+|---|---|
+| Token coverage | No raw hex colors, pixel values, or hardcoded font sizes |
+| Semantic HTML | Headings, landmarks, and form elements used correctly |
+| Component isolation | Reusable patterns extracted as components with props |
+| Responsive behavior | Layout adapts across frame presets (desktop, tablet, mobile) |
+| Accessibility | Alt text on images, proper heading hierarchy, sufficient contrast |
+| Naming | Classes and component names reflect purpose, not appearance |
+
+## The feedback loop
+
+After integration, the codebase and the design remain connected through the shared token system. When the design team updates a token in Nokuva, the same update applies to the codebase's token file. The token names are the contract between design and code.
+
+This is the design-to-code gap closed. Not through a one-time export that drifts immediately. Through a shared system of named values that both environments reference. The design is not a historical artifact. It is the living source of truth.
+
+## Comparison with prompt-to-code output
+
+| Aspect | Prompt-to-code | Nokuva conversion |
+|---|---|---|
+| Source | Natural language prompt | Perfected visual design |
+| Iteration cost | Full regeneration per change | Zero (changes are in the design) |
+| Token system | None (inline values) | Full token hierarchy |
+| Structural accuracy | Model's interpretation of prompt | Direct serialization of canvas |
+| Consistency | Varies per generation | Guaranteed by tokens |
+| Stakeholder approval | After code (expensive to change) | Before code (cheap to change) |
+
+The fastest way to get production-ready code is not to generate it directly. It is to design it first, perfect it visually, systematize it with tokens, and convert once. That is the workflow Nokuva enables and the one that produces the cleanest output.

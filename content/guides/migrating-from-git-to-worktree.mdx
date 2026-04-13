@@ -1,0 +1,154 @@
+---
+title: Migrating from Git to W0rktree
+description: Import your Git repository, map the terminology, and adopt W0rktree incrementally with live mirror mode.
+author: Sean Filimon
+date: 2026-04-10
+difficulty: intermediate
+tags:
+  - w0rktree
+  - git
+  - migration
+---
+
+## Import a Git repository
+
+The fastest way to start is importing an existing Git repository directly:
+
+```bash
+wt init --from-git https://github.com/org/repo.git
+```
+
+This converts your Git history into W0rktree format. Commits become snapshots, tags carry over, branches map directly, and `.gitignore` is converted to `.wt/ignore`.
+
+For a local repository:
+
+```bash
+wt init --from-git ./local-repo --full-history
+```
+
+To import only specific branches:
+
+```bash
+wt init --from-git https://github.com/org/repo.git --branches main,develop
+```
+
+## Terminology mapping
+
+The conceptual mapping between Git and W0rktree is straightforward:
+
+| Git | W0rktree | What changed |
+|---|---|---|
+| Commit | **Snapshot** | Same idea, plain-language name. Immutable and content-addressed. |
+| Repository | **Tree** | A versioned collection of files. Trees can be nested. |
+| Push / Pull | **Sync** / **Push** | `wt sync` is bidirectional. `wt push` finalizes staged snapshots. |
+| Checkout (branch) | **Branch switch** | `wt branch switch main` — one command, one job. |
+| Checkout (file) | **Restore** | `wt restore file.txt` — separate command. |
+| Staging area / Index | (does not exist) | Snapshots capture working state directly. No `add` command. |
+| Stash | (not needed) | Auto-snapshots capture everything. Switch branches freely. |
+| HEAD | **Current snapshot** | No cryptic pointer names. |
+| `.git/` | `.wt/` | Root configuration directory. |
+| `.gitignore` | `.wt/ignore` | Same syntax, hierarchical with ceiling model. |
+
+## What changes
+
+### No rebase, no force-push
+
+This is the biggest mental shift. W0rktree history is append-only. If you make a mistake, create a new snapshot that fixes it. The original remains in history because that is what happened.
+
+There is no `git rebase -i` to clean up a messy branch. There is no `git push --force` to overwrite a remote. There is no `git reset --hard` to throw away work.
+
+This is not a limitation — it is a design decision that makes history safer, simpler, and auditable. One merge model instead of four (merge, rebase, squash, cherry-pick). No accidental data loss from a bad command.
+
+### No staging area
+
+Git's `add` → `commit` workflow does not exist. The bgprocess watches your files and creates snapshots of the working state. You can create manual snapshots with `wt snapshot -m "message"`, but there is no index to curate.
+
+### One command, one job
+
+Git's `checkout` does three things depending on flags. W0rktree splits them:
+
+| Git | W0rktree |
+|---|---|
+| `git checkout -b feature` | `wt branch create feature` |
+| `git checkout main` | `wt branch switch main` |
+| `git checkout -- file.txt` | `wt restore file.txt` |
+
+Every command does exactly one thing. The command name describes the action.
+
+### Auto-snapshots by default
+
+The bgprocess creates snapshots automatically as you work. Interval and threshold are configurable. Manual mode is available if you prefer explicit control, but the default is automation — your job is to write code, not to babysit version control.
+
+## Live mirror mode
+
+For teams that cannot switch overnight, W0rktree supports bidirectional sync with a Git remote:
+
+```bash
+wt remote add github --git https://github.com/org/repo.git
+wt remote mirror github --bidirectional
+```
+
+While mirroring:
+
+- Snapshots created in W0rktree are automatically pushed to GitHub as commits
+- Commits pushed to GitHub are automatically pulled into W0rktree as snapshots
+- Tags round-trip in both directions
+- Branches round-trip in both directions
+
+This lets you adopt W0rktree incrementally. Developers who switch use `wt` commands. Developers still on Git use `git` commands. Both sides see the same history. Once the team has migrated, disable the mirror and remove the Git remote.
+
+## Round-trip guarantees
+
+The Git compatibility layer preserves everything that matters:
+
+| Entity | Git → W0rktree → Git |
+|---|---|
+| File content | Byte-for-byte identical |
+| Author and date | Preserved in snapshot metadata |
+| Merge history | Structure preserved, parent relationships maintained |
+| Tags | Lightweight and annotated tags round-trip |
+| Branches | Names and targets preserved |
+| Commit/snapshot content | Content preserved (hashes differ due to different addressing) |
+
+## CI/CD considerations
+
+If your CI/CD pipelines read from Git, live mirror mode keeps them working during migration. Pipelines continue cloning from GitHub or GitLab while the team works in W0rktree.
+
+Once migrated, switch pipelines to W0rktree's native protocol. The server provides:
+
+- **Branch protection with CI gates** — required checks must pass before merge
+- **Server-enforced merge requests** — built into the protocol, no external platform needed
+- **Tag and release management** — create releases with attached artifacts directly from `wt release create`
+
+The Git compatibility protocol also means a Git client can clone a W0rktree tree with reduced functionality, so existing tooling that only speaks Git can still access the code.
+
+## Export back to Git
+
+If you ever need a Git-format copy:
+
+```bash
+wt export-git ./output-repo --full-history
+wt export-git ./output-repo --branch main
+```
+
+You can also push directly to a Git remote:
+
+```bash
+wt remote add github --git https://github.com/org/repo.git
+wt remote push github main
+```
+
+W0rktree converts snapshots to commits, preserving content, authorship, and merge structure.
+
+## Migration strategy
+
+A practical rollout for teams:
+
+1. **Import** your primary repository with `wt init --from-git`.
+2. **Enable live mirror** so both Git and W0rktree users see the same state.
+3. **Onboard developers** one team at a time. Each team starts using `wt` commands while Git users continue uninterrupted.
+4. **Split into trees** at your own pace. Large directories become independent trees with their own branches and access rules.
+5. **Disable mirror** once all developers have switched.
+6. **Enable W0rktree-native features**: staged visibility, declarative access control, linked branches, dependency tracking.
+
+The migration is incremental. No big-bang cutover required.

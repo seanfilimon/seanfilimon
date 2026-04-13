@@ -1,0 +1,104 @@
+---
+title: Designing append-only history
+description: Why W0rktree forbids rebase and force-push, and how append-only history enables better collaboration.
+author: Sean Filimon
+date: 2026-03-25
+tags:
+  - w0rktree
+  - version-control
+  - design
+---
+
+## The case against rebase
+
+Rebase is the most celebrated and most dangerous feature in Git. The pitch is simple: before merging your feature branch, replay your commits on top of the latest main to produce a clean, linear history. The reality is more complex.
+
+Rebase rewrites history. It changes parent hashes, which changes commit hashes, which means the commits you had locally are different objects from the commits now on the remote. Force-pushing is required because you are telling the remote to throw away its version of history and accept yours.
+
+This creates a cascade of problems:
+
+- **Teammates lose work.** If someone branched off your feature branch and you rebase, their branch now points to commits that no longer exist on yours. They have to rebase too, or reconcile the divergence manually.
+- **CI results become meaningless.** A rebased branch is technically a different branch. The CI pass on the pre-rebase version does not guarantee the post-rebase version is safe.
+- **Debugging history is unreliable.** `git bisect` on a rebased branch finds the commit where a bug "appeared" — but that commit may be a synthetic artifact of the rebase, not the actual moment the bug was introduced.
+- **Audit trails break.** Compliance requires knowing what happened and when. Rebased history is a narrative, not a record.
+
+## History as a record, not a narrative
+
+W0rktree takes a fundamentally different position: history is a record of what happened, not a story to be edited after the fact.
+
+If you write a bad snapshot, you create a new snapshot that fixes it. The original mistake remains in history because that is what happened. The fix is visible too. Anyone reviewing the timeline sees the actual sequence of events.
+
+This is how every other record-keeping system works. Financial ledgers are append-only. Audit logs are append-only. Legal records are append-only. Version control history should be too.
+
+The argument for rebase — "I want a clean history" — optimizes for reading history at the cost of destroying the actual history. W0rktree optimizes for correctness instead.
+
+## Non-destructive operations
+
+The append-only principle extends to every destructive operation in W0rktree:
+
+**Branch deletion** is a soft delete. The branch enters a recovery state with a configurable retention window. During that window, it can be restored. After the window expires, it is garbage collected.
+
+**Snapshot revert** creates a new snapshot with the inverse diff. The original snapshot is untouched. The revert snapshot records a reference to the original for auditability.
+
+**Tag deletion** is a soft delete with the same recovery window model.
+
+Nothing is permanently gone immediately. Accidental data loss requires active effort to achieve.
+
+```toml
+# .wt/config.toml
+
+[reflog]
+retention = "90d"
+max_entries = 10000
+sync_to_server = true
+```
+
+The reflog is synced to the server. It is not a local-only safety net that expires like Git's reflog. It is a server-backed, auditable log of every operation that moved a branch pointer.
+
+## How it enables better collaboration
+
+Append-only history removes an entire category of team friction.
+
+### No force-push conflicts
+
+In Git, force-push overwrites the remote branch. If a teammate has work based on the old history, they discover the problem at the worst possible time — when trying to push or merge. The resolution is manual and error-prone.
+
+In W0rktree, this scenario cannot happen. History only moves forward. Your teammates' branches always have a valid common ancestor with yours.
+
+### One merge model
+
+Git has four ways to combine branches: merge, rebase, squash merge, and cherry-pick. Each has different semantics, different history implications, and different footguns. Teams spend real time debating merge strategies in their contribution guides.
+
+W0rktree has one: merge. A merge creates a new snapshot that records the combination of two branches. Both parent branches are preserved in the DAG. The history is complete and unambiguous.
+
+```bash
+wt merge feature-auth
+```
+
+If changes conflict, the bgprocess surfaces three-way conflict markers with clear labels and machine-readable metadata. Non-conflicting changes merge automatically.
+
+### Safe automation
+
+Auto-snapshots and auto-sync are default behaviors in W0rktree. The bgprocess creates snapshots as you work and syncs them to the server as staged snapshots. This is only safe because history is append-only — an automatic snapshot cannot corrupt or overwrite existing history.
+
+In Git, automation around commits and pushes is risky precisely because history is mutable. An automated tool that rebases or force-pushes can destroy work.
+
+### Auditable by default
+
+Every snapshot, merge, branch operation, and sync is recorded in the reflog and synced to the server. The full history of how a branch evolved — including the mistakes and fixes — is available for debugging, compliance, and forensics.
+
+You do not need to reconstruct what happened from a rebased linear history that hides the actual development process.
+
+## The simplicity argument
+
+Append-only history is simpler to reason about. There is no mental model for "what rebase does to parent pointers" because rebase does not exist. There is no distinction between merge commit and squash commit because squash does not exist. There is no "my local history diverged from the remote after a rebase" because history never diverges.
+
+New developers learn one model: snapshots are added to branches. Branches are merged. History moves forward. That is it.
+
+This simplicity is not a reduction in capability. It is a reduction in the number of ways things can go wrong. The features rebase provides — integrating upstream changes, producing a coherent history — are achieved through merge, which does the same thing without rewriting history.
+
+## A design decision, not a limitation
+
+Every version control system makes a choice about history mutability. Git chose mutability and paid for it with complexity, footguns, and data loss stories. W0rktree chose immutability and gets safety, simplicity, and auditability in return.
+
+The trade-off is that your history shows the actual development process, including the messy parts. We think that is a feature.

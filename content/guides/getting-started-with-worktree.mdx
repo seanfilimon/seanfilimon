@@ -1,0 +1,149 @@
+---
+title: Getting started with W0rktree
+description: Learn the core concepts, terminology, and commands to start using W0rktree as your version control system.
+author: Sean Filimon
+date: 2026-04-10
+difficulty: beginner
+tags:
+  - w0rktree
+  - version-control
+  - getting-started
+---
+
+## What is W0rktree
+
+W0rktree is a distributed version control system written in Rust that replaces Git entirely. It is not a wrapper, not an extension, and not a monorepo tool built on top of Git. W0rktree has its own protocol, storage model, identity system, and history model.
+
+It was designed for the problems Git cannot solve: monorepos with thousands of contributors, fine-grained access controls at the file level, real-time collaboration visibility, and append-only history that prevents accidental data loss.
+
+## Core terminology
+
+W0rktree uses plain language. If you know what a word means in English, you know what it means in W0rktree.
+
+| W0rktree | Replaces (Git) | Meaning |
+|---|---|---|
+| **Snapshot** | Commit | An immutable point-in-time capture of file state |
+| **Tree** | Repository | A versioned collection of files with its own history and branches |
+| **Sync** | Push / Pull | Bidirectional transfer of snapshots between bgprocess and server |
+| **Branch** | Branch | Same concept, but tree-scoped and independently configured |
+| **Tenant** | (no equivalent) | A user or organization with verified identity |
+| **Staged Snapshot** | (no equivalent) | A snapshot visible to the team but not yet part of branch history |
+
+Things that do not exist in W0rktree: no staging area, no index, no `add` command, no rebase, no `reset --hard`, no force-push, and no `checkout` that does three different things.
+
+## The two-runtime architecture
+
+W0rktree is split into two cooperating runtimes. Neither is optional.
+
+**worktree-bgprocess** runs on your machine. It watches your files, creates snapshots automatically, manages branches, and syncs with the server. It is the only process that touches your working directory.
+
+**worktree-server** is the source of truth. It stores canonical history, manages tenants and teams, enforces access control and license compliance, and handles branch protection. The bgprocess syncs with the server but cannot bypass its enforcement.
+
+The separation is strict: the bgprocess never enforces access control, and the server never watches files.
+
+## Initialize a new project
+
+```bash
+wt init
+```
+
+This creates a `.wt/` directory at your project root — the equivalent of `.git/`. Inside it you will find configuration files, access rules, identity settings, hooks, and the reflog.
+
+To initialize from a remote W0rktree:
+
+```bash
+wt init --from https://wt.acme.dev/acme-corp/my-project
+```
+
+You can limit history depth with `--depth 10` or sync only specific trees with `--trees frontend,shared-models`.
+
+## Create a snapshot
+
+```bash
+wt snapshot -m "Add authentication handler"
+```
+
+A snapshot captures the full state of your tree at a point in time. Snapshots are immutable and content-addressed — two identical states produce the same hash.
+
+By default the bgprocess creates snapshots automatically as you work. Auto-snapshot interval and file-change threshold are configurable:
+
+```toml
+# .wt/config.toml
+
+[snapshot]
+auto = true
+auto_interval = "30s"
+auto_threshold = 5
+```
+
+You can also create manual snapshots at any time with `wt snapshot`.
+
+## Work with branches
+
+```bash
+wt branch create feature-auth
+wt branch switch feature-auth
+wt branch list
+wt branch delete old-experiment
+```
+
+Each command does exactly one thing. There is no overloaded `checkout`. Creating a branch is `branch create`. Switching is `branch switch`. Restoring a file is `wt restore file.txt`.
+
+Branches are scoped to their tree. A branch named `feature-auth` in the `frontend` tree is independent of a branch with the same name in the `backend` tree unless they are explicitly linked.
+
+## Sync with the server
+
+```bash
+wt sync
+```
+
+Sync is bidirectional — it uploads your staged snapshots and downloads remote changes. If auto-sync is enabled, this happens continuously in the background.
+
+To finalize your work into branch history:
+
+```bash
+wt push
+```
+
+The distinction between staged and pushed is fundamental. Staged snapshots are visible to your team but do not appear in branch history. Pushing finalizes them.
+
+## Directory structure
+
+A typical W0rktree project looks like this:
+
+```
+my-project/
+├── .wt/                     ← Root configuration
+│   ├── config.toml          ← Root settings
+│   ├── ignore               ← Ignore patterns
+│   ├── identity/            ← Tenant credentials
+│   ├── access/              ← Root access policies
+│   ├── hooks/               ← Lifecycle hooks
+│   └── reflog/              ← Operation log
+├── services/
+│   ├── auth-service/
+│   │   ├── .wt-tree/        ← Tree-level configuration
+│   │   └── src/
+│   └── api-gateway/
+│       ├── .wt-tree/
+│       └── src/
+└── frontend/
+    ├── .wt-tree/
+    └── src/
+```
+
+One `.wt/` at the root. One `.wt-tree/` per tree. Each tree has independent versioning, branches, and access rules.
+
+## Merging
+
+W0rktree has one merge model: merge. There is no rebase. There is no squash. There is no cherry-pick that rewrites history.
+
+```bash
+wt merge feature-auth
+```
+
+Non-conflicting changes merge automatically. When conflicts occur, the bgprocess shows three-way conflict markers with clear labels (your changes, original, their changes) and writes machine-readable metadata to `.wt/conflicts/` for tooling integration.
+
+## What comes next
+
+Once you are comfortable with the basics, explore the guides on staged snapshots for real-time team visibility, declarative access control for fine-grained permissions, and the migration guide if you are coming from Git.

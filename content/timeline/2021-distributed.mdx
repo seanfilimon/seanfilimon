@@ -1,0 +1,13 @@
+---
+title: Distributed Systems Deep Dive
+year: "2021"
+type: learning
+icon: network
+order: 4
+---
+
+I became obsessed with a question: **how do you get multiple computers to agree on anything?** That question led me down the rabbit hole of distributed consensus, and I haven't fully come back up.
+
+Read the Raft paper, then Paxos, then the Git internals documentation cover to cover. Built toy implementations of each to make sure I actually understood them — not just the happy path, but the edge cases where everything falls apart.
+
+This year reframed how I think about software. Every system is distributed if you zoom out enough. Networks fail, clocks drift, messages get lost. The interesting problems aren't "how do you build it" — they're "how do you build it so it **stays built** when things go wrong."

@@ -1,0 +1,969 @@
+---
+title: "Declarative Access Control in W0rktree — Terraform for Permissions"
+description: "How W0rktree's version-controlled, declarative TOML-based access policies replace platform-dependent permission systems with auditable, diffable configuration."
+author: Sean Filimon
+date: 2026-04-13
+tags:
+  - w0rktree
+  - access-control
+  - iam
+  - security
+---
+
+## The problem with Git permissions
+
+Git has no access control. None. The protocol does not define roles, permissions, or policies. Everything you think of as "Git permissions" is actually GitHub permissions or GitLab permissions or Bitbucket permissions — platform features bolted on top of a system that was never designed for them.
+
+This creates a set of problems that compound at scale.
+
+Permissions live in web UIs, disconnected from the code they protect. You configure who can push to `main` by clicking through a settings page. That configuration is not in your repository. It is not version-controlled. It is not diffable. When someone changes a branch protection rule at 2am to unblock a hotfix and forgets to change it back, there is no commit to revert. There is no pull request to review. The change happened in a database row on GitHub's infrastructure, and you find out about it weeks later when an intern pushes directly to production.
+
+The audit trail is platform-specific and non-portable. GitHub has an audit log. GitLab has a different audit log. Bitbucket has yet another. If you migrate from one to another, you lose the history of every permission change. If you need to prove to an auditor that a specific person had read-only access to a directory for the past six months, you are searching through platform-specific APIs and hoping the retention period covers it.
+
+There is no code review for permission changes. A repository admin can change who has write access, add a deploy key, or disable branch protection with no approval from anyone. The same organization that requires two reviewers for a one-line CSS fix allows unilateral changes to the security boundary of the entire codebase.
+
+Different platforms have different models. GitHub has repository-level roles with branch protection rules. GitLab has project-level and group-level permissions with protected branches and protected tags. Bitbucket has project permissions layered on top of repository permissions. None of them support path-level access within a repository. None of them version-control their configuration. If you use multiple platforms — or switch between them — your permission model does not transfer.
+
+## The Terraform-style approach
+
+W0rktree takes a fundamentally different approach. Access rules are not platform features. They are configuration files checked into the repository, version-controlled alongside the code, and enforced by the server.
+
+The model is closest to Terraform or Kubernetes manifests. You declare the desired state in TOML files. The system reads those files and enforces them. Changes go through the same snapshot and review process as code. The full history is in the snapshot log. Every permission change has an author, a timestamp, and a diff.
+
+Access configuration lives in two locations:
+
+- `.wt/access/` at the worktree root defines the global ceiling — the maximum permissions anyone can have across the entire worktree.
+- `.wt-tree/access/` in each tree defines tree-scoped restrictions that can narrow the ceiling but never expand it.
+
+Both are plain TOML files. Both are version-controlled. Both are diffable with standard tools. A permission change looks like this in a diff:
+
+```toml
+# .wt/access/policies.toml — before
+[[policy]]
+scope = "tree"
+action = "allow"
+role = "developer"
+permissions = ["snapshot_create", "snapshot_read", "branch_read"]
+
+# .wt/access/policies.toml — after (added branch_create)
+[[policy]]
+scope = "tree"
+action = "allow"
+role = "developer"
+permissions = ["snapshot_create", "snapshot_read", "branch_read", "branch_create"]
+```
+
+That diff tells you exactly what changed, who changed it, and when. It goes through review. It is auditable forever.
+
+## File structure
+
+The access control system spans several configuration files. Each has a specific role.
+
+`.wt/config.toml` is the root configuration file. It declares which paths are registered for path-level access control, configures tenant grants, and sets worktree-wide settings. This is the first file the server reads when evaluating permissions.
+
+`.wt/access/roles.toml` defines custom roles beyond the five built-in ones. Each custom role is a named collection of permissions that can be referenced in policies.
+
+`.wt/access/policies.toml` defines root-level access policies. These are the ceiling — the maximum permissions that can exist anywhere in the worktree. Every tree-level policy is evaluated against these.
+
+`.wt-tree/config.toml` in each tree holds tree-scoped configuration, including path registrations specific to that tree.
+
+`.wt-tree/access/policies.toml` in each tree defines tree-level restriction policies. These can deny permissions that the root allows, but they cannot grant permissions that the root does not.
+
+```
+my-worktree/
+  .wt/
+    config.toml              # path registration, tenant grants
+    access/
+      roles.toml             # custom role definitions
+      policies.toml          # root ceiling policies
+  frontend/
+    .wt-tree/
+      config.toml            # tree-scoped path registration
+      access/
+        policies.toml        # tree restriction policies
+    src/
+      ...
+  backend/
+    .wt-tree/
+      config.toml
+      access/
+        policies.toml
+    src/
+      ...
+```
+
+## Explicit path registration
+
+This is the most important design decision in the entire access control system.
+
+Every path that needs path-level access control must be explicitly registered in `config.toml`. There are no globs. No wildcards. No regular expressions. If you want to control access to `backend/secrets/production.env`, you register that exact path.
+
+```toml
+# .wt/config.toml
+[[registered_paths]]
+path = "backend/secrets/production.env"
+description = "Production environment secrets"
+
+[[registered_paths]]
+path = "backend/secrets/"
+description = "All secret files"
+
+[[registered_paths]]
+path = "infrastructure/terraform/"
+description = "Terraform configurations"
+
+[[registered_paths]]
+path = "docs/internal/"
+description = "Internal documentation"
+
+[[registered_paths]]
+path = "releases/"
+description = "Release artifacts and configs"
+```
+
+Trailing `/` indicates a directory. `backend/secrets/` means the directory and everything in it. `backend/secrets/production.env` means that specific file.
+
+The reasons for requiring explicit registration are deliberate:
+
+**Predictability.** When you look at `config.toml`, you see every path that has access control. There is no guessing about what `src/**/*.secret` might match. No wondering if a glob includes a file that was added last week.
+
+**Auditability.** An auditor can open one file and see the complete list of protected paths. No interpretation required. No pattern-matching logic to reason about.
+
+**O(1) performance.** Path lookup is a hash map check, not a pattern-matching scan. The server does not evaluate regular expressions on every request.
+
+**Intentionality.** Adding access control to a path is a conscious decision that shows up in a diff. You cannot accidentally protect or unprotect a path by adding a file that happens to match a glob.
+
+**Simplicity.** The system does exactly what you tell it. If a path is not registered, it follows the default tree or worktree policy. No surprises.
+
+**Refactoring safety.** If you rename a directory, you know exactly which registered paths need updating. A glob like `src/**/secrets/**` might silently stop matching after a restructure. An explicit path `src/backend/secrets/` either matches or it does not, and you will notice when you update the directory structure.
+
+## Built-in roles
+
+W0rktree ships with five built-in roles. These cover the vast majority of use cases and serve as the foundation for custom roles.
+
+```toml
+# Built-in role definitions (these are not user-configurable)
+
+[roles.owner]
+description = "Full control over the worktree"
+permissions = [
+  "snapshot_create", "snapshot_read", "snapshot_delete",
+  "branch_create", "branch_read", "branch_delete", "branch_protect",
+  "tree_create", "tree_read", "tree_delete", "tree_configure",
+  "access_read", "access_write", "access_admin",
+  "sync_push", "sync_pull",
+  "admin_settings", "admin_members", "admin_billing",
+  "license_read", "license_write", "license_admin",
+  "hook_create", "hook_read", "hook_delete"
+]
+
+[roles.admin]
+description = "Manage the worktree without billing or ownership transfer"
+permissions = [
+  "snapshot_create", "snapshot_read", "snapshot_delete",
+  "branch_create", "branch_read", "branch_delete", "branch_protect",
+  "tree_create", "tree_read", "tree_delete", "tree_configure",
+  "access_read", "access_write",
+  "sync_push", "sync_pull",
+  "admin_settings", "admin_members",
+  "license_read", "license_write",
+  "hook_create", "hook_read", "hook_delete"
+]
+
+[roles.maintainer]
+description = "Manage code and branches, no admin settings"
+permissions = [
+  "snapshot_create", "snapshot_read",
+  "branch_create", "branch_read", "branch_delete", "branch_protect",
+  "tree_create", "tree_read", "tree_configure",
+  "access_read",
+  "sync_push", "sync_pull",
+  "license_read",
+  "hook_create", "hook_read"
+]
+
+[roles.developer]
+description = "Write code, create branches, push and pull"
+permissions = [
+  "snapshot_create", "snapshot_read",
+  "branch_create", "branch_read",
+  "tree_read",
+  "sync_push", "sync_pull",
+  "license_read",
+  "hook_read"
+]
+
+[roles.viewer]
+description = "Read-only access"
+permissions = [
+  "snapshot_read",
+  "branch_read",
+  "tree_read",
+  "sync_pull",
+  "license_read"
+]
+```
+
+The hierarchy is strict: Owner > Admin > Maintainer > Developer > Viewer. Each level is a proper subset of the one above it. The server validates this — you cannot create a custom role that has `admin_billing` but not `admin_settings`.
+
+## Custom roles
+
+When the five built-in roles don't fit, you define custom roles in `.wt/access/roles.toml`. Custom roles are named collections of permissions scoped to specific use cases.
+
+```toml
+# .wt/access/roles.toml
+
+[roles.security-reviewer]
+description = "Can read all code and access policies, cannot write"
+permissions = [
+  "snapshot_read",
+  "branch_read",
+  "tree_read",
+  "access_read",
+  "sync_pull",
+  "license_read"
+]
+
+[roles.release-manager]
+description = "Can manage branches and branch protection for releases"
+permissions = [
+  "snapshot_create", "snapshot_read",
+  "branch_create", "branch_read", "branch_delete", "branch_protect",
+  "tree_read",
+  "sync_push", "sync_pull",
+  "license_read"
+]
+
+[roles.ci-bot]
+description = "Automated CI/CD with push access, no admin capabilities"
+permissions = [
+  "snapshot_create", "snapshot_read",
+  "branch_create", "branch_read",
+  "tree_read",
+  "sync_push", "sync_pull"
+]
+
+[roles.auditor]
+description = "Read everything including access policies, write nothing"
+permissions = [
+  "snapshot_read",
+  "branch_read",
+  "tree_read",
+  "access_read",
+  "sync_pull",
+  "license_read",
+  "hook_read"
+]
+
+[roles.intern]
+description = "Limited developer access, no branch deletion or protection"
+permissions = [
+  "snapshot_create", "snapshot_read",
+  "branch_create", "branch_read",
+  "tree_read",
+  "sync_push", "sync_pull"
+]
+```
+
+Naming rules for custom roles: lowercase alphanumeric characters and hyphens only. `security-reviewer` is valid. `SecurityReviewer`, `security_reviewer`, and `security reviewer` are not. The server rejects role names that shadow built-in roles — you cannot create a custom role called `admin` or `developer`.
+
+## Access policies
+
+Policies are where the system comes together. A policy combines a scope, an action (allow or deny), a target (role, tenant, username, or email), and a set of permissions. Policies live in `.wt/access/policies.toml` for root-level rules and `.wt-tree/access/policies.toml` for tree-level restrictions.
+
+Here is a comprehensive set of examples covering the most common patterns.
+
+**Worktree-wide team access by role:**
+
+```toml
+# Grant developers standard permissions across the entire worktree
+[[policy]]
+scope = "global"
+action = "allow"
+role = "developer"
+permissions = ["snapshot_create", "snapshot_read", "branch_create", "branch_read", "sync_push", "sync_pull"]
+```
+
+**Cross-tenant access by username:**
+
+```toml
+# Grant a specific external contributor developer-level access
+[[policy]]
+scope = "global"
+action = "allow"
+username = "alice@externalcorp"
+permissions = ["snapshot_create", "snapshot_read", "branch_create", "branch_read", "sync_push", "sync_pull"]
+```
+
+**Cross-tenant access by email:**
+
+```toml
+# Grant access to anyone with a verified email at a partner organization
+[[policy]]
+scope = "global"
+action = "allow"
+email = "*@partnercorp.com"
+permissions = ["snapshot_read", "branch_read", "sync_pull"]
+```
+
+**Branch-specific access — protect main:**
+
+```toml
+# Only maintainers and above can push to main
+[[policy]]
+scope = "branch"
+branch = "main"
+action = "deny"
+role = "developer"
+permissions = ["sync_push"]
+
+[[policy]]
+scope = "branch"
+branch = "main"
+action = "deny"
+role = "intern"
+permissions = ["sync_push"]
+
+# Maintainers can push to main (explicitly allowed at root)
+[[policy]]
+scope = "branch"
+branch = "main"
+action = "allow"
+role = "maintainer"
+permissions = ["sync_push", "branch_protect"]
+```
+
+**Path-level access — deny secrets to everyone, allow to admins:**
+
+```toml
+# Deny all access to secrets directory by default
+[[policy]]
+scope = "registered_path"
+path = "backend/secrets/"
+action = "deny"
+role = "*"
+permissions = ["snapshot_read", "snapshot_create", "sync_pull", "sync_push"]
+
+# Allow admins to read and write secrets
+[[policy]]
+scope = "registered_path"
+path = "backend/secrets/"
+action = "allow"
+role = "admin"
+permissions = ["snapshot_read", "snapshot_create", "sync_pull", "sync_push"]
+
+# Allow the security-reviewer custom role to read secrets
+[[policy]]
+scope = "registered_path"
+path = "backend/secrets/"
+action = "allow"
+role = "security-reviewer"
+permissions = ["snapshot_read", "sync_pull"]
+```
+
+**CI bot restrictions:**
+
+```toml
+# CI bot can only push to ci/* branches
+[[policy]]
+scope = "global"
+action = "allow"
+role = "ci-bot"
+permissions = ["snapshot_create", "snapshot_read", "branch_read", "sync_pull"]
+
+[[policy]]
+scope = "branch"
+branch = "ci/*"
+action = "allow"
+role = "ci-bot"
+permissions = ["sync_push", "branch_create"]
+
+# Explicitly deny ci-bot from pushing to main or release branches
+[[policy]]
+scope = "branch"
+branch = "main"
+action = "deny"
+role = "ci-bot"
+permissions = ["sync_push"]
+
+[[policy]]
+scope = "branch"
+branch = "release/*"
+action = "deny"
+role = "ci-bot"
+permissions = ["sync_push"]
+```
+
+**Role-based combinations — release workflow:**
+
+```toml
+# Release managers can create and protect release branches
+[[policy]]
+scope = "branch"
+branch = "release/*"
+action = "allow"
+role = "release-manager"
+permissions = ["branch_create", "branch_protect", "sync_push", "snapshot_create"]
+
+# Developers can read release branches but not push to them
+[[policy]]
+scope = "branch"
+branch = "release/*"
+action = "allow"
+role = "developer"
+permissions = ["branch_read", "snapshot_read", "sync_pull"]
+
+[[policy]]
+scope = "branch"
+branch = "release/*"
+action = "deny"
+role = "developer"
+permissions = ["sync_push", "branch_create", "branch_delete"]
+```
+
+## The permission ceiling model
+
+This is the design that makes delegation safe.
+
+Root `.wt/access/` is the ceiling. It defines the maximum permissions that can exist anywhere in the worktree. Tree `.wt-tree/access/` can restrict those permissions further, but it can never expand beyond them. If a subtree has its own `.wt-tree/access/`, it restricts further still.
+
+Think of it as a series of filters. The root policy says "these are all the permissions that are possible." Each tree policy says "within my scope, these are the ones I actually allow." The server evaluates top-down and takes the intersection.
+
+Here is what happens when a tree tries to expand beyond the root:
+
+```toml
+# Root: .wt/access/policies.toml
+# Developers can read and create snapshots, read branches, push and pull
+[[policy]]
+scope = "global"
+action = "allow"
+role = "developer"
+permissions = ["snapshot_create", "snapshot_read", "branch_read", "sync_push", "sync_pull"]
+```
+
+```toml
+# Tree: frontend/.wt-tree/access/policies.toml
+# REJECTED — tries to grant branch_create, which root does not allow for developers
+[[policy]]
+scope = "tree"
+action = "allow"
+role = "developer"
+permissions = ["snapshot_create", "snapshot_read", "branch_read", "branch_create", "sync_push", "sync_pull"]
+```
+
+The server rejects this with error `E3002: tree policy exceeds root ceiling`. The tree cannot grant `branch_create` because the root never allowed it for the `developer` role. The tree admin must either remove `branch_create` from the tree policy or ask the root admin to add it to the root ceiling.
+
+A valid tree restriction looks like this:
+
+```toml
+# Root: .wt/access/policies.toml
+# Developers can push and pull across the worktree
+[[policy]]
+scope = "global"
+action = "allow"
+role = "developer"
+permissions = ["snapshot_create", "snapshot_read", "branch_create", "branch_read", "sync_push", "sync_pull"]
+```
+
+```toml
+# Tree: backend/billing/.wt-tree/access/policies.toml
+# Restrict: developers can only read in the billing tree, not write
+[[policy]]
+scope = "tree"
+action = "deny"
+role = "developer"
+permissions = ["snapshot_create", "sync_push", "branch_create"]
+```
+
+This works because the tree is narrowing, not expanding. Developers can still read billing code, but they cannot create snapshots, push, or create branches within the billing tree. The root ceiling is respected.
+
+The ceiling model means you can hand tree ownership to individual teams without risking permission escalation. The platform team controls the root. The billing team controls `backend/billing/.wt-tree/access/`. The billing team can lock down their tree as tightly as they want, but they cannot give themselves permissions the platform team did not grant.
+
+## Scope hierarchy
+
+Policies are evaluated in a strict hierarchy from most specific to least specific:
+
+1. **RegisteredPath** — policies targeting a specific registered path
+2. **Branch** — policies targeting a specific branch or branch pattern
+3. **Tree** — policies scoped to a specific tree
+4. **Tenant** — policies scoped to a tenant
+5. **Global** — worktree-wide policies
+
+Resolution follows four rules:
+
+**Most specific wins.** A policy on `backend/secrets/production.env` overrides a policy on `backend/secrets/` which overrides a tree-level policy on the backend tree which overrides a global policy.
+
+**Deny beats allow at the same level.** If two policies at the same scope level conflict — one allows and one denies — deny wins. This is a safety default. You can always open up access by being more specific, but ambiguity at the same level resolves to restriction.
+
+**Fall through to broader scope.** If no policy matches at the most specific level, the system checks the next broader scope. A path with no registered path policy falls through to branch, then tree, then tenant, then global.
+
+**Default is deny.** If no policy matches at any level, the action is denied. W0rktree is deny-by-default. Access must be explicitly granted.
+
+An example resolution:
+
+```
+Request: developer "alice" wants sync_push on file "backend/secrets/api-keys.env" on branch "main"
+
+1. RegisteredPath check: "backend/secrets/" has deny for role="*" on sync_push → DENIED
+   (Even though alice is an admin elsewhere, the path-level deny applies)
+
+If the path were not registered:
+2. Branch check: "main" has deny for role="developer" on sync_push → DENIED
+
+If no branch policy:
+3. Tree check: backend tree has allow for role="developer" on sync_push → ALLOWED
+
+If no tree policy:
+4. Tenant check: alice's tenant has allow for role="developer" → ALLOWED
+
+If no tenant policy:
+5. Global check: global policy allows developers to sync_push → ALLOWED
+
+If no global policy:
+6. Default: DENIED
+```
+
+## The validation pipeline
+
+When you change an access configuration file, a multi-stage validation pipeline runs before the policy takes effect.
+
+The bgprocess detects the file change through its file watcher. It reads the modified TOML and runs local validation first:
+
+**Client-side validation:**
+- TOML syntax — is the file valid TOML?
+- Schema validation — does the structure match the expected schema?
+- Role references — does every role referenced in a policy exist as a built-in or custom role?
+- Permission names — is every permission string a valid permission?
+- Registered paths — does every path referenced in a path-scoped policy exist in `config.toml`?
+- Duplicate detection — are there conflicting policies at the same scope for the same target?
+
+If local validation passes, the bgprocess syncs the configuration to the server. The server runs a second, more comprehensive validation:
+
+**Server-side validation:**
+- Tenant resolution — can every referenced tenant, username, or email be resolved?
+- Path consistency — do registered paths in tree configs align with the tree's actual location?
+- Policy consistency — do all tree policies fit within the root ceiling?
+- Escalation check — does the change grant the author permissions they did not previously have? (Requires a second approver if so.)
+- Tree override validation — does every tree-level deny reference a permission that the root-level allows?
+
+If server validation passes, the policy is applied immediately. Other connected clients sync the updated configuration on their next sync cycle.
+
+```
+Developer edits .wt/access/policies.toml
+         │
+         ▼
+BGProcess detects file change
+         │
+         ▼
+Local validation (TOML, schema, roles, permissions, paths, duplicates)
+         │
+    ┌────┴────┐
+    │ FAIL    │ PASS
+    │         │
+    ▼         ▼
+Error shown   Sync to server
+in terminal         │
+                    ▼
+         Server validation (tenant, path, ceiling, escalation, override)
+                    │
+               ┌────┴────┐
+               │ FAIL    │ PASS
+               │         │
+               ▼         ▼
+         Error synced  Policy applied immediately
+         to client           │
+                             ▼
+                    Other clients sync updated config
+```
+
+## Simple tenant grants
+
+For the common case of granting a tenant access to an entire worktree with a single role, writing full policies is verbose. The `[[tenant_access]]` shorthand in `config.toml` handles this.
+
+```toml
+# .wt/config.toml
+
+[[tenant_access]]
+tenant = "frontend-team"
+role = "developer"
+
+[[tenant_access]]
+tenant = "security-team"
+role = "security-reviewer"
+
+[[tenant_access]]
+tenant = "ci-pipeline"
+role = "ci-bot"
+expires = "2027-01-01T00:00:00Z"
+
+[[tenant_access]]
+tenant = "external-auditor"
+role = "auditor"
+expires = "2026-07-01T00:00:00Z"
+```
+
+The server expands each `[[tenant_access]]` entry into a full global policy internally. The internal policies are prefixed with `__auto_tenant_grant_` so they can be distinguished from hand-written policies in logs and debugging.
+
+A `[[tenant_access]]` with `role = "developer"` expands to:
+
+```toml
+# Server-generated (not written to file)
+[[policy]]
+scope = "global"
+action = "allow"
+tenant = "frontend-team"
+role = "developer"
+permissions = ["snapshot_create", "snapshot_read", "branch_create", "branch_read", "tree_read", "sync_push", "sync_pull", "license_read", "hook_read"]
+_internal_id = "__auto_tenant_grant_frontend-team_developer"
+```
+
+When to use the shorthand vs full policies: use `[[tenant_access]]` when you want to give a tenant standard role-level access to the entire worktree. Use full policies in `.wt/access/policies.toml` when you need branch-specific rules, path-level restrictions, custom permission sets, or any condition beyond "this tenant gets this role globally."
+
+## Real-world examples
+
+### Open source project with protected releases
+
+An open source project where external contributors can read everything and submit snapshots, but only maintainers can touch release branches and the release directory.
+
+```toml
+# .wt/config.toml
+
+[[registered_paths]]
+path = "releases/"
+description = "Release artifacts and signing keys"
+
+[[registered_paths]]
+path = ".wt/access/"
+description = "Access control configuration"
+
+[[tenant_access]]
+tenant = "core-maintainers"
+role = "maintainer"
+
+[[tenant_access]]
+tenant = "community-contributors"
+role = "developer"
+```
+
+```toml
+# .wt/access/policies.toml
+
+# Public read access for all authenticated tenants
+[[policy]]
+scope = "global"
+action = "allow"
+role = "viewer"
+permissions = ["snapshot_read", "branch_read", "tree_read", "sync_pull"]
+
+# Contributors can push to feature branches
+[[policy]]
+scope = "global"
+action = "allow"
+role = "developer"
+permissions = ["snapshot_create", "snapshot_read", "branch_create", "branch_read", "sync_push", "sync_pull"]
+
+# Protect main — only maintainers push
+[[policy]]
+scope = "branch"
+branch = "main"
+action = "deny"
+role = "developer"
+permissions = ["sync_push"]
+
+# Protect release branches — only maintainers
+[[policy]]
+scope = "branch"
+branch = "release/*"
+action = "deny"
+role = "developer"
+permissions = ["sync_push", "branch_create", "branch_delete"]
+
+[[policy]]
+scope = "branch"
+branch = "release/*"
+action = "allow"
+role = "maintainer"
+permissions = ["sync_push", "branch_create", "branch_protect"]
+
+# Lock down releases directory
+[[policy]]
+scope = "registered_path"
+path = "releases/"
+action = "deny"
+role = "*"
+permissions = ["snapshot_create", "sync_push"]
+
+[[policy]]
+scope = "registered_path"
+path = "releases/"
+action = "allow"
+role = "maintainer"
+permissions = ["snapshot_create", "snapshot_read", "sync_push", "sync_pull"]
+
+# Only admins can modify access control configuration
+[[policy]]
+scope = "registered_path"
+path = ".wt/access/"
+action = "deny"
+role = "*"
+permissions = ["snapshot_create", "sync_push"]
+
+[[policy]]
+scope = "registered_path"
+path = ".wt/access/"
+action = "allow"
+role = "admin"
+permissions = ["snapshot_create", "snapshot_read", "sync_push", "sync_pull"]
+```
+
+### Enterprise monorepo with team boundaries
+
+A company with billing, security, and SRE teams, each owning a subtree with different access requirements.
+
+```toml
+# .wt/config.toml
+
+[[registered_paths]]
+path = "services/billing/secrets/"
+description = "Billing service secrets and PCI-scoped config"
+
+[[registered_paths]]
+path = "services/security/keys/"
+description = "Security team encryption keys"
+
+[[registered_paths]]
+path = "infrastructure/production/"
+description = "Production infrastructure configs"
+
+[[registered_paths]]
+path = "infrastructure/production/terraform.tfstate"
+description = "Production Terraform state"
+
+[[tenant_access]]
+tenant = "engineering-org"
+role = "developer"
+
+[[tenant_access]]
+tenant = "billing-team"
+role = "maintainer"
+
+[[tenant_access]]
+tenant = "security-team"
+role = "maintainer"
+
+[[tenant_access]]
+tenant = "sre-team"
+role = "maintainer"
+
+[[tenant_access]]
+tenant = "ci-system"
+role = "ci-bot"
+```
+
+```toml
+# .wt/access/roles.toml
+
+[roles.security-reviewer]
+description = "Cross-team security audit access"
+permissions = [
+  "snapshot_read", "branch_read", "tree_read",
+  "access_read", "sync_pull", "license_read"
+]
+
+[roles.ci-bot]
+description = "CI pipeline automation"
+permissions = [
+  "snapshot_create", "snapshot_read",
+  "branch_create", "branch_read",
+  "tree_read", "sync_push", "sync_pull"
+]
+```
+
+```toml
+# .wt/access/policies.toml
+
+# All engineers can read everything at the root level
+[[policy]]
+scope = "global"
+action = "allow"
+role = "developer"
+permissions = ["snapshot_create", "snapshot_read", "branch_create", "branch_read", "tree_read", "sync_push", "sync_pull"]
+
+# Protect main across the entire worktree
+[[policy]]
+scope = "branch"
+branch = "main"
+action = "deny"
+role = "developer"
+permissions = ["sync_push"]
+
+[[policy]]
+scope = "branch"
+branch = "main"
+action = "allow"
+role = "maintainer"
+permissions = ["sync_push", "branch_protect"]
+
+# Billing secrets: deny all, allow billing team
+[[policy]]
+scope = "registered_path"
+path = "services/billing/secrets/"
+action = "deny"
+role = "*"
+permissions = ["snapshot_read", "snapshot_create", "sync_pull", "sync_push"]
+
+[[policy]]
+scope = "registered_path"
+path = "services/billing/secrets/"
+action = "allow"
+tenant = "billing-team"
+permissions = ["snapshot_read", "snapshot_create", "sync_pull", "sync_push"]
+
+# Security keys: deny all, allow security team
+[[policy]]
+scope = "registered_path"
+path = "services/security/keys/"
+action = "deny"
+role = "*"
+permissions = ["snapshot_read", "snapshot_create", "sync_pull", "sync_push"]
+
+[[policy]]
+scope = "registered_path"
+path = "services/security/keys/"
+action = "allow"
+tenant = "security-team"
+permissions = ["snapshot_read", "snapshot_create", "sync_pull", "sync_push"]
+
+# Production infra: deny all, allow SRE
+[[policy]]
+scope = "registered_path"
+path = "infrastructure/production/"
+action = "deny"
+role = "*"
+permissions = ["snapshot_read", "snapshot_create", "sync_pull", "sync_push"]
+
+[[policy]]
+scope = "registered_path"
+path = "infrastructure/production/"
+action = "allow"
+tenant = "sre-team"
+permissions = ["snapshot_read", "snapshot_create", "sync_pull", "sync_push"]
+
+# Terraform state: even more restricted, only SRE admins
+[[policy]]
+scope = "registered_path"
+path = "infrastructure/production/terraform.tfstate"
+action = "deny"
+role = "*"
+permissions = ["snapshot_read", "snapshot_create", "sync_pull", "sync_push"]
+
+[[policy]]
+scope = "registered_path"
+path = "infrastructure/production/terraform.tfstate"
+action = "allow"
+tenant = "sre-team"
+role = "admin"
+permissions = ["snapshot_read", "snapshot_create", "sync_pull", "sync_push"]
+
+# Security reviewers can read across teams (but not write)
+[[policy]]
+scope = "global"
+action = "allow"
+role = "security-reviewer"
+permissions = ["snapshot_read", "branch_read", "tree_read", "access_read", "sync_pull"]
+
+# CI bot restricted to ci/* branches
+[[policy]]
+scope = "branch"
+branch = "ci/*"
+action = "allow"
+role = "ci-bot"
+permissions = ["sync_push", "branch_create", "snapshot_create"]
+
+[[policy]]
+scope = "branch"
+branch = "main"
+action = "deny"
+role = "ci-bot"
+permissions = ["sync_push"]
+```
+
+```toml
+# services/billing/.wt-tree/access/policies.toml
+
+# Within billing tree: interns cannot create snapshots
+[[policy]]
+scope = "tree"
+action = "deny"
+role = "intern"
+permissions = ["snapshot_create", "sync_push"]
+
+# Billing team developers have full access within their tree
+[[policy]]
+scope = "tree"
+action = "allow"
+tenant = "billing-team"
+role = "developer"
+permissions = ["snapshot_create", "snapshot_read", "branch_create", "branch_read", "sync_push", "sync_pull"]
+```
+
+## Error handling
+
+The validation pipeline produces structured error codes that tell you exactly what went wrong and where.
+
+**Client-side errors (E1xxx and E2xxx):**
+
+| Code | Description |
+|------|-------------|
+| E1001 | Invalid TOML syntax |
+| E1002 | Schema validation failure — missing required field |
+| E1003 | Schema validation failure — unexpected field |
+| E1004 | Schema validation failure — wrong type |
+| E2001 | Unknown role referenced in policy |
+| E2002 | Unknown permission name |
+| E2003 | Path referenced in policy not found in registered_paths |
+| E2004 | Duplicate policy — same scope, target, and action already exists |
+| E2005 | Custom role name shadows built-in role |
+| E2006 | Custom role name contains invalid characters |
+
+**Server-side errors (E3xxx and E4xxx):**
+
+| Code | Description |
+|------|-------------|
+| E3001 | Tenant not found or not resolvable |
+| E3002 | Tree policy exceeds root ceiling |
+| E3003 | Escalation detected — change grants author new permissions, requires second approver |
+| E3004 | Registered path in tree config does not match tree location |
+| E3005 | Tree override references permission not present in root allow |
+| E4001 | Policy consistency failure — contradictory policies at same scope |
+| E4002 | Circular tenant grant detected |
+| E4003 | Expired tenant grant referenced in active policy |
+
+**Recovery mechanisms:**
+
+Even if the access configuration is completely broken, the system has safeguards.
+
+The worktree owner always has access. The `owner` role is special — it cannot be denied by any policy, including path-level and tree-level policies. If every other policy is misconfigured, the owner can still access the worktree and fix the configuration.
+
+Server administrators have an override. The server admin panel provides an emergency access override that bypasses all policy evaluation. This is logged, auditable, and generates an alert. It exists for the scenario where the owner's account is compromised or unavailable and the access configuration needs repair.
+
+Snapshot restore as a recovery path. Since access configuration is version-controlled, you can restore a previous snapshot to roll back a bad configuration change. The server applies the restored configuration immediately. This is functionally equivalent to `git revert` on a bad commit — the broken configuration stays in history (append-only), but the current state is corrected.
+
+```
+# Recovery steps for a broken access configuration
+
+1. wt snapshot list --path .wt/access/    # find the last known-good snapshot
+2. wt restore --snapshot <hash> .wt/access/  # restore the access directory
+3. wt snapshot --message "Restore access config from <hash>"
+4. wt push                                 # sync restored config to server
+```
+
+## Why this matters
+
+The comparison with Git's approach is not about features. It is about where the source of truth lives.
+
+In Git, the source of truth for "who can do what" lives in a platform database, managed through a web UI, with a platform-specific audit trail that you lose when you switch providers. In W0rktree, it lives in the same repository as the code, managed through the same workflow as code, with the same history and review process.
+
+When the access configuration is code, you get everything that comes with treating it as code. You can review it. You can diff it. You can roll it back. You can test it. You can search it. You can automate it. You can copy it to a new worktree and have the same security posture instantly.
+
+That is what "Terraform for permissions" means. Not that the syntax is similar — it is TOML, not HCL. The principle is what matters: declare the desired state, check it into version control, let the system enforce it. The alternative is clicking through web UIs and hoping everyone remembers to undo the temporary change.

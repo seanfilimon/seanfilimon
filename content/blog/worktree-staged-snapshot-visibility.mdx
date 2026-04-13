@@ -1,0 +1,432 @@
+---
+title: "Staged Snapshot Visibility — How W0rktree Solves Team Coordination"
+description: "How W0rktree's staged snapshots give teams real-time visibility into work-in-progress without polluting branch history."
+author: Sean Filimon
+date: 2026-04-13
+tags:
+  - w0rktree
+  - collaboration
+  - staged-snapshots
+  - version-control
+---
+
+## The problem Git created
+
+Git's visibility model has two states: invisible and permanent. Your work does not exist to your team until you push. Once you push, it is branch history forever.
+
+There is no middle ground. No "my teammates can see what I'm working on without me merging anything." No "the team knows two people are editing the same file before the conflict happens." The entire concept of work-in-progress visibility does not exist in the Git protocol.
+
+Teams have built an entire coordination infrastructure to compensate for this gap. Daily standups where engineers verbally describe which files they touched. Slack channels dedicated to announcing "I'm working on the auth module, heads up." Jira tickets that theoretically track who is doing what, except the ticket says "implement OAuth" and tells you nothing about which files are changing. Draft pull requests with a WIP label that still pollute branch history with half-finished commits.
+
+The failure mode is predictable. Two engineers work on the same feature area for three days. Neither pushes — the code is not ready. At merge time, they discover overlapping changes across a dozen files. The conflict resolution takes longer than the feature work. The standup that morning mentioned neither was touching the same files because the granularity of verbal coordination does not match the granularity of code changes.
+
+This is not a tooling problem Git failed to solve. It is a design constraint. Git was built for kernel development where Linus reviews patches over email. The model assumes individual contributors working on clearly separated subsystems. It was never designed for ten engineers on a product team iterating on the same React component tree.
+
+W0rktree treats this as a protocol-level concern. Visibility into active work is not a platform feature or an integration — it is built into the sync protocol between the local bgprocess and the server.
+
+## How staged snapshots work
+
+The pipeline is straightforward. Understanding it end-to-end explains every feature that follows.
+
+**Step 1: The developer writes code.** Nothing changes here. You edit files in your editor.
+
+**Step 2: The bgprocess captures snapshots.** The local bgprocess watches the filesystem using OS-native APIs (inotify on Linux, FSEvents on macOS, ReadDirectoryChangesW on Windows). When files change, it creates snapshots — either automatically based on configured intervals and thresholds, or manually when the developer runs `wt snapshot`.
+
+**Step 3: The bgprocess syncs snapshots to the server.** This is where things diverge from Git. The bgprocess sends snapshot metadata to the server over the gRPC/QUIC sync protocol. These arrive on the server as **staged snapshots** — visible to the team but explicitly not part of branch history.
+
+**Step 4: The server stores and indexes staged snapshots.** The server maintains a real-time index of all staged snapshots across all users, branches, and trees. This index powers every visibility surface: CLI commands, the admin panel, the SDK, the WebSocket feed.
+
+**Step 5: Other developers see activity.** Through any visibility surface, team members can see who is working on what, which files are changing, and whether there is potential overlap with their own work.
+
+**Step 6: The developer pushes.** When the work is ready, `wt push` finalizes the snapshots into branch history. The server runs conflict detection, license compliance checks, and access control validation. Only at this point does the work become permanent history.
+
+The critical distinction: **staged is not pushed.** Staged snapshots are a visibility layer. They can be discarded, overwritten, or expired without leaving any trace in branch history. They exist for coordination, not for the historical record.
+
+```
+Developer edits files
+        │
+        ▼
+bgprocess captures snapshot (auto or manual)
+        │
+        ▼
+bgprocess syncs to server as "staged snapshot"
+        │
+        ▼
+Server stores in staged index (visible to team, NOT in branch history)
+        │
+        ├───► Other devs see activity via CLI, panel, SDK, WebSocket
+        │
+        ▼
+Developer runs `wt push` ──► Snapshots finalize into branch history
+```
+
+## What is visible
+
+Staged snapshots expose enough information to coordinate without broadcasting your raw work.
+
+**File paths.** The full path of every file that has changed since the last push. If Alice has staged changes that include `src/auth/oauth.rs` and `src/auth/session.rs`, those paths are visible to the team.
+
+**Who.** The user identity associated with the snapshot. This ties to the W0rktree identity system — an authenticated tenant, not an ambiguous email address.
+
+**Which branch.** The branch the developer is working on. Combined with file paths, this tells you whether someone is working on the same feature branch or a different one.
+
+**Which tree.** In a multi-tree worktree, the specific tree where the changes live. A change in `services/auth` is a different tree from `services/billing`.
+
+**Timestamp.** When the snapshot was staged. This tells you how recent the activity is. A snapshot from ten minutes ago means active work. A snapshot from three weeks ago means a stale branch.
+
+**Snapshot count.** How many snapshots have been staged since the last push. A branch with 47 staged snapshots has seen significant work. A branch with 2 has just started.
+
+**Optional message.** Developers can attach a message to a manual snapshot via `wt snapshot -m "refactored token validation"`. Automatic snapshots do not carry messages by default.
+
+This is enough to detect potential conflicts (two people editing the same files), gauge progress (how much work has accumulated on a branch), and identify stale branches (snapshots from weeks ago with no push).
+
+## What is not visible
+
+Staged snapshots are deliberately coarse-grained. The system does not broadcast everything.
+
+**Not real-time presence.** There is no cursor tracking, no keystroke streaming, no "Alice is typing in line 47 of oauth.rs" indicator. This is version control, not Google Docs. The granularity is snapshot-level — you see that files changed, not how they are changing in real-time.
+
+**Not line-level diffs.** Staged snapshots show which files changed, not what changed within them. Diffs are not pre-computed for staged snapshots. If you want to see the actual changes, wait for the push or ask the developer directly.
+
+**Not raw file contents.** The staged snapshot index contains metadata, not file blobs. You cannot read someone else's staged code through the visibility layer. The file contents remain on the developer's machine and in the server's snapshot store, subject to access control and license compliance.
+
+**Not proprietary content.** For files under proprietary licenses (tracked by W0rktree's SPDX compliance engine), the path is visible but the content is restricted by the grant level assigned to your tenant. Staged visibility does not bypass license enforcement.
+
+This design is intentional. The visibility layer exists for coordination — "should I talk to Alice before I edit this file?" — not for surveillance.
+
+## Visibility surfaces
+
+Staged snapshot data is accessible through five surfaces, each designed for a different workflow.
+
+### CLI
+
+The primary interface for individual developers.
+
+**Team-wide overview:**
+
+```bash
+$ wt status --team
+
+Branch: feature/oauth
+Tree:   services/auth
+
+Team Activity (last 24h):
+  alice   feature/oauth     services/auth    3 files staged   12m ago
+  bob     feature/billing   services/billing 7 files staged   2h ago
+  carol   main              services/api     1 file staged    6h ago
+
+Potential overlap with your branch:
+  alice has staged changes to 2 files you have also modified:
+    src/auth/oauth.rs
+    src/auth/session.rs
+```
+
+**All staged snapshots:**
+
+```bash
+$ wt staged
+
+Staged Snapshots:
+  ID        User    Branch             Tree              Files  Timestamp            Message
+  sn-a3f8   alice   feature/oauth      services/auth     3      2026-04-13 09:48    refactored token validation
+  sn-b1c2   alice   feature/oauth      services/auth     3      2026-04-13 09:31    —
+  sn-d4e5   bob     feature/billing    services/billing  7      2026-04-13 07:52    —
+  sn-f6a7   carol   main               services/api      1      2026-04-13 03:14    fixed rate limit header
+```
+
+**Filter by user:**
+
+```bash
+$ wt staged --user alice
+
+Staged Snapshots (alice):
+  ID        Branch             Tree              Files  Timestamp            Message
+  sn-a3f8   feature/oauth      services/auth     3      2026-04-13 09:48    refactored token validation
+  sn-b1c2   feature/oauth      services/auth     3      2026-04-13 09:31    —
+
+  Files changed:
+    src/auth/oauth.rs
+    src/auth/session.rs
+    src/auth/token.rs
+```
+
+**Filter by branch:**
+
+```bash
+$ wt staged --branch feature/oauth
+
+Staged Snapshots (feature/oauth):
+  ID        User    Tree              Files  Timestamp            Message
+  sn-a3f8   alice   services/auth     3      2026-04-13 09:48    refactored token validation
+  sn-b1c2   alice   services/auth     3      2026-04-13 09:31    —
+
+  All files changed on this branch:
+    src/auth/oauth.rs
+    src/auth/session.rs
+    src/auth/token.rs
+```
+
+### Admin panel
+
+The web-based admin panel provides a dashboard view for team leads and project managers. It aggregates staged snapshot data across the entire worktree:
+
+- Active branches with staged but unpushed work
+- Per-user activity heatmaps (files touched, snapshot frequency)
+- Stale branch detection (branches with staged snapshots older than a configurable threshold)
+- Overlap alerts (multiple users staging changes to the same files)
+
+The admin panel consumes the same API as the CLI and SDK — there is no separate data path.
+
+### SDK
+
+The W0rktree SDK exposes staged snapshot data through event subscriptions and query APIs for integration into custom tooling.
+
+**Event subscription** receives real-time notifications when staged snapshots are created, pushed, or cleared. This enables custom integrations: CI triggers on staged activity, Slack bots that announce when someone starts working on a protected file, dashboards that visualize team velocity.
+
+**Query API** supports the same filtering as the CLI: by user, branch, tree, timestamp range, and file path. Results are paginated and sortable.
+
+### WebSocket
+
+For real-time integrations, the server exposes a WebSocket endpoint at `/api/repositories/:id/staged/live`. Clients receive JSON events as staged snapshots are created or updated.
+
+```json
+{
+  "event": "snapshot_staged",
+  "data": {
+    "snapshot_id": "sn-a3f8c921",
+    "user": {
+      "id": "usr-alice-001",
+      "display_name": "alice"
+    },
+    "branch": "feature/oauth",
+    "tree": "services/auth",
+    "files_changed": [
+      "src/auth/oauth.rs",
+      "src/auth/session.rs",
+      "src/auth/token.rs"
+    ],
+    "timestamp": "2026-04-13T09:48:22Z",
+    "message": "refactored token validation",
+    "status": "staged",
+    "overlap": {
+      "detected": true,
+      "users": ["bob"],
+      "files": ["src/auth/oauth.rs"]
+    }
+  }
+}
+```
+
+Additional event types include `snapshot_pushed` (when a staged snapshot is finalized into history), `snapshot_cleared` (when a user discards staged work), and `snapshot_expired` (when retention policy removes old staged data).
+
+### REST API
+
+Standard request-response API for non-real-time integrations. Endpoints mirror the CLI commands:
+
+- `GET /api/repositories/:id/staged` — list all staged snapshots
+- `GET /api/repositories/:id/staged?user=alice` — filter by user
+- `GET /api/repositories/:id/staged?branch=feature/oauth` — filter by branch
+- `GET /api/repositories/:id/staged?file=src/auth/oauth.rs` — find who has staged changes to a specific file
+- `DELETE /api/repositories/:id/staged/:snapshot_id` — clear a staged snapshot
+
+## Conflict detection via staged visibility
+
+The most immediate practical benefit: when you push, the server tells you if someone else has been working on the same files.
+
+```bash
+$ wt push
+
+Pushing 4 snapshots to feature/oauth (services/auth)...
+
+  ⚠ Overlap detected:
+    bob has 2 staged snapshots on feature/billing that modify:
+      src/auth/oauth.rs (also modified in your push)
+
+    This is an advisory warning. bob's changes are staged, not pushed.
+    You may want to coordinate before both branches are merged.
+
+    Options:
+      [c] Continue push
+      [a] Abort push
+      [d] Show details
+
+  Continue? [c/a/d]: c
+
+  ✓ 4 snapshots pushed to feature/oauth
+  ✓ Staged snapshots cleared
+```
+
+This is advisory, not blocking. The push succeeds if you choose to continue. The system gives you the information; you make the decision.
+
+The detection works by comparing the file paths in your push against the file paths in all other staged snapshots on the same tree. It does not compute diffs — it identifies overlap at the file path level. This is fast (a set intersection on indexed paths) and sufficient for coordination. If two developers have both modified `src/auth/oauth.rs`, they should talk. The system does not need to know whether the changes actually conflict at the line level to surface that signal.
+
+## The staged snapshot data model
+
+Under the hood, staged snapshots are structured data indexed for fast querying.
+
+```rust
+struct StagedSnapshot {
+    id: SnapshotId,
+    user: TenantId,
+    tree: TreeId,
+    branch: BranchName,
+    files_changed: Vec<FilePath>,
+    timestamp: DateTime<Utc>,
+    message: Option<String>,
+    status: StagedStatus,
+}
+
+enum StagedStatus {
+    Staged,   // Visible to team, not in branch history
+    Pushed,   // Finalized into branch history
+    Cleared,  // Manually discarded by user
+    Expired,  // Removed by retention policy
+}
+```
+
+The server maintains indexes on multiple dimensions for efficient querying:
+
+- **By user** — "show me everything Alice has staged"
+- **By branch** — "show me all staged work on feature/oauth"
+- **By tree** — "show me all staged work in services/auth"
+- **By timestamp** — "show me staged work from the last 24 hours"
+- **By file path** — "show me who has staged changes to src/auth/oauth.rs"
+
+Composite queries combine these indexes. "Show me staged work by Alice on feature/oauth in services/auth that touches src/auth/oauth.rs in the last 24 hours" resolves to an intersection of five index lookups, each of which is O(1) or O(log n).
+
+The `files_changed` field stores full paths relative to the tree root. Paths are normalized on ingest (forward slashes, no trailing separators, no `.` or `..` components) so index lookups are exact string matches.
+
+## Privacy controls
+
+Visibility is the default, but it is not mandatory. Teams and individuals have granular control over what gets shared.
+
+### Opt out per tree
+
+Disable automatic sync for a specific tree by setting the `auto_sync` flag in the tree's configuration:
+
+```toml
+# .wt-tree/config.toml
+
+[sync]
+auto_sync = false    # bgprocess will not auto-sync snapshots for this tree
+manual_sync = true   # `wt sync` still works when explicitly invoked
+```
+
+With `auto_sync = false`, the bgprocess still creates local snapshots (for local history and undo), but it does not send them to the server. No staged snapshot data appears for this tree until the developer explicitly runs `wt sync` or `wt push`.
+
+### Temporary pause
+
+Pause and resume sync without changing configuration:
+
+```bash
+# Stop syncing staged snapshots (takes effect immediately)
+$ wt sync pause
+Sync paused. Local snapshots will continue. Run `wt sync resume` to restart.
+
+# Resume syncing
+$ wt sync resume
+Sync resumed. Queued snapshots will sync on next interval.
+```
+
+This is useful when working on sensitive prototypes, personal experiments, or branches where visibility is not yet desired. The pause is session-level — it does not persist across bgprocess restarts unless configured in `.wt-tree/config.toml`.
+
+### Branch-level privacy
+
+Staged snapshots from branches marked as private are only visible to users who have `branch:read` permission on that branch. This is enforced server-side through the declarative access control system.
+
+```toml
+# .wt-tree/access/branches.toml
+
+[branch."experiment/secret-prototype"]
+visibility = "private"
+
+[branch."experiment/secret-prototype".grants]
+alice = "branch:read,branch:write"
+bob = "branch:read"
+```
+
+In this configuration, only Alice and Bob can see staged snapshots from `experiment/secret-prototype`. Other team members see no activity on that branch — it does not appear in `wt status --team`, `wt staged`, or any other visibility surface.
+
+### Public worktree behavior
+
+For public worktrees (visibility mode `public`), staged snapshots are visible to all authenticated tenants who have read access to the worktree. This is the expected behavior — public worktrees are openly visible by definition. Developers who want private branches within a public worktree use branch-level privacy controls.
+
+## Retention policy
+
+Staged snapshot data follows different retention rules depending on its status.
+
+**Pushed snapshots.** When a staged snapshot is finalized via `wt push`, its metadata is retained indefinitely as part of the audit trail. The actual snapshot content is in branch history. The staged metadata records that the snapshot existed in the staged state before being pushed — useful for understanding the development timeline.
+
+**Unpushed snapshots.** Staged snapshots that are never pushed have a default retention period of 30 days. After 30 days, the server marks them as `Expired` and removes them from the active index. The retention period is configurable at the worktree level:
+
+```toml
+# .wt/config.toml
+
+[staged]
+retention_days = 30    # default
+retention_days = 90    # keep unpushed staged data for 90 days
+retention_days = 7     # aggressive cleanup
+```
+
+**Manual clearing.** Developers can clear their own staged snapshots at any time:
+
+```bash
+# Clear all your staged snapshots in the current tree
+$ wt staged clear
+Cleared 12 staged snapshots in services/auth.
+
+# Clear staged snapshots for a specific branch
+$ wt staged clear --branch feature/oauth
+Cleared 4 staged snapshots on feature/oauth.
+
+# Clear all your staged snapshots across all trees
+$ wt staged clear --all
+Cleared 23 staged snapshots across 4 trees.
+```
+
+Clearing is non-destructive in the sense that it does not affect local snapshots or branch history. It only removes the staged metadata from the server's visibility index. The local bgprocess retains its snapshot history independently.
+
+## License compliance interaction
+
+W0rktree's SPDX license compliance engine interacts with staged visibility in a specific way: metadata is always visible, but file contents respect license grants.
+
+**Metadata is always visible.** The file path, user, branch, tree, timestamp, and snapshot count are visible regardless of the license applied to any file. If Alice has staged changes to `src/proprietary/billing-engine.rs`, you can see the path and know she is working on it.
+
+**File contents respect licenses.** If you request the actual content of a staged file (through the SDK or API, not through the default CLI which only shows metadata), the license compliance engine checks your grant level:
+
+- **MIT, Apache-2.0, BSD, and other permissive licenses:** File content is readable by any authenticated tenant with tree-level read access.
+- **Proprietary or restricted licenses:** File content is only accessible if your tenant has a `read`, `modify`, or `redistribute` grant for that path's license. Without a grant, you see the path in the staged snapshot metadata but cannot retrieve the file content.
+
+This means staged visibility never creates a license compliance loophole. You can always see that a file is being worked on (for coordination purposes), but you cannot use staged snapshots to read proprietary code you do not have a grant for.
+
+## Comparison with Git workflows
+
+Teams using Git have developed a catalog of workarounds for the visibility gap. All of them are external to the version control system, and all of them have significant limitations.
+
+### Standups
+
+The most common coordination mechanism. Developers verbally describe what they are working on. The problem: granularity. "I'm working on the auth module" does not tell you which files. "I'm editing oauth.rs" does not tell you which functions. And the information is stale by the time the standup ends — developers change direction throughout the day.
+
+Standups also fail at scale. A team of five can coordinate verbally. A team of twenty cannot. A cross-team monorepo with fifty engineers has no chance.
+
+### Slack and chat
+
+"Hey, heads up, I'm refactoring the billing service." Better than nothing, but relies on discipline. Nobody messages Slack every time they open a file. The signal is inconsistent, incomplete, and buried in a channel with hundreds of other messages.
+
+### Draft pull requests
+
+GitHub and GitLab support draft PRs — pull requests marked as work-in-progress. This gets the code on the server, which is progress. But it pollutes branch history with incomplete commits. Other developers can see the PR, but they have to actively check the PR dashboard. There is no notification that someone's draft PR overlaps with your current work. And the developer has to manually create the PR, manually push updates, and remember to convert it from draft to ready.
+
+### Ticket systems
+
+Jira, Linear, Asana. These track tasks, not code. The ticket says "Implement OAuth flow" and is assigned to Alice. This tells you Alice is working on OAuth, but it does not tell you she is editing `src/auth/session.rs` — the same file you are about to refactor. The abstraction level is too high for file-level coordination.
+
+### Why staged snapshots are fundamentally different
+
+All the Git workarounds share three problems. They are external to the version control system, so they require discipline and manual effort. They operate at the wrong granularity — verbal descriptions and ticket titles do not match file paths. And they are point-in-time — a standup is current at 9:30 AM and stale by 10:00 AM.
+
+Staged snapshots solve all three. They are built into the version control protocol, so they require zero manual effort beyond writing code. They operate at file-path granularity, which is the granularity where conflicts actually occur. And they are continuous — every snapshot captured by the bgprocess updates the visibility layer in real-time.
+
+The result is that conflict detection moves from merge time to work time. You learn about overlapping work when it starts, not when it is too late to do anything about it without a painful conflict resolution session.
+
+This is what version control should have been doing all along.
