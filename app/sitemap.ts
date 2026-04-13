@@ -1,84 +1,57 @@
 import type { MetadataRoute } from "next";
-import { source, blog, guides, articles, resources, events } from "@/lib/source";
+import { source, blog, guides, articles, resources, events, projects } from "@/lib/source";
 import { siteUrl } from "@/lib/metadata";
+
+function mapPages(
+  pages: { url: string; data: unknown }[],
+  changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"],
+  priority: number,
+): MetadataRoute.Sitemap {
+  return pages.map((page) => {
+    const data = page.data as Record<string, unknown>;
+    const date = data.date;
+    return {
+      url: `${siteUrl}${page.url}`,
+      lastModified: date ? new Date(String(date)) : undefined,
+      changeFrequency,
+      priority,
+    };
+  });
+}
+
+function dedupe(entries: MetadataRoute.Sitemap): MetadataRoute.Sitemap {
+  const seen = new Set<string>();
+  return entries.filter((entry) => {
+    const normalized = entry.url.replace(/\/+$/, "");
+    if (seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
+}
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticPages: MetadataRoute.Sitemap = [
-    {
-      url: siteUrl,
-      changeFrequency: "weekly",
-      priority: 1,
-    },
-    {
-      url: `${siteUrl}/blog`,
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
-    {
-      url: `${siteUrl}/guides`,
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
-    {
-      url: `${siteUrl}/articles`,
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
-    {
-      url: `${siteUrl}/resources`,
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
-    {
-      url: `${siteUrl}/events`,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
+    { url: siteUrl, changeFrequency: "daily", priority: 1 },
+    { url: `${siteUrl}/about`, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${siteUrl}/story`, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${siteUrl}/autobiography`, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${siteUrl}/experience`, changeFrequency: "weekly", priority: 0.7 },
+    { url: `${siteUrl}/projects`, changeFrequency: "daily", priority: 0.8 },
+    { url: `${siteUrl}/contact`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${siteUrl}/follow`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${siteUrl}/videos`, changeFrequency: "daily", priority: 0.6 },
   ];
 
-  const docsPages: MetadataRoute.Sitemap = source.getPages().map((page) => ({
-    url: `${siteUrl}${page.url}`,
-    changeFrequency: "weekly" as const,
-    priority: 0.7,
-  }));
-
-  const blogPages: MetadataRoute.Sitemap = blog.getPages().map((page) => ({
-    url: `${siteUrl}${page.url}`,
-    changeFrequency: "monthly" as const,
-    priority: 0.8,
-  }));
-
-  const guidePages: MetadataRoute.Sitemap = guides.getPages().map((page) => ({
-    url: `${siteUrl}${page.url}`,
-    changeFrequency: "monthly" as const,
-    priority: 0.8,
-  }));
-
-  const articlePages: MetadataRoute.Sitemap = articles.getPages().map((page) => ({
-    url: `${siteUrl}${page.url}`,
-    changeFrequency: "monthly" as const,
-    priority: 0.8,
-  }));
-
-  const resourcePages: MetadataRoute.Sitemap = resources.getPages().map((page) => ({
-    url: `${siteUrl}${page.url}`,
-    changeFrequency: "monthly" as const,
-    priority: 0.7,
-  }));
-
-  const eventPages: MetadataRoute.Sitemap = events.getPages().map((page) => ({
-    url: `${siteUrl}${page.url}`,
-    changeFrequency: "yearly" as const,
-    priority: 0.5,
-  }));
-
-  return [
+  const all: MetadataRoute.Sitemap = [
     ...staticPages,
-    ...docsPages,
-    ...blogPages,
-    ...guidePages,
-    ...articlePages,
-    ...resourcePages,
-    ...eventPages,
+    ...mapPages(source.getPages(), "daily", 0.7),
+    ...mapPages(blog.getPages(), "daily", 0.8),
+    ...mapPages(guides.getPages(), "daily", 0.8),
+    ...mapPages(articles.getPages(), "daily", 0.8),
+    ...mapPages(resources.getPages(), "weekly", 0.7),
+    ...mapPages(events.getPages(), "weekly", 0.5),
+    ...mapPages(projects.getPages(), "daily", 0.7),
   ];
+
+  return dedupe(all);
 }
