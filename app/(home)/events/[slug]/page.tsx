@@ -23,10 +23,10 @@ export default async function EventPage(props: {
           <div className="min-w-0 flex-1">
             <div className="mb-8">
               <Link
-                href="/events"
+                href="/"
                 className="text-sm text-fd-muted-foreground hover:text-fd-foreground"
               >
-                &larr; Back to events
+                &larr; Back
               </Link>
             </div>
             <header className="mb-8 border-b border-fd-border pb-8">

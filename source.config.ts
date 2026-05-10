@@ -52,6 +52,17 @@ export const articlePosts = defineCollections({
   }),
 });
 
+export const researchPosts = defineCollections({
+  type: "doc",
+  dir: "content/research",
+  schema: frontmatterSchema.extend({
+    author: z.string(),
+    date: z.string().date().or(z.date()),
+    thumbnail: z.string().optional(),
+    tags: z.array(z.string()).default([]),
+  }),
+});
+
 export const resourcePosts = defineCollections({
   type: "doc",
   dir: "content/resources",
@@ -136,7 +147,13 @@ export const timelinePosts = defineCollections({
   dir: "content/timeline",
   schema: frontmatterSchema.extend({
     year: z.string(),
-    type: z.enum(["milestone", "learning", "founding", "launch", "achievement"]),
+    type: z.enum([
+      "milestone",
+      "learning",
+      "founding",
+      "launch",
+      "achievement",
+    ]),
     icon: z.string().optional(),
     order: z.number().default(0),
   }),

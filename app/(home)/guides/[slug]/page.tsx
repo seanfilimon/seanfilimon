@@ -23,10 +23,10 @@ export default async function GuidePage(props: {
           <div className="min-w-0 flex-1">
             <div className="mb-8">
               <Link
-                href="/guides"
+                href="/"
                 className="text-sm text-fd-muted-foreground hover:text-fd-foreground"
               >
-                &larr; Back to guides
+                &larr; Back
               </Link>
             </div>
             <header className="mb-8 border-b border-fd-border pb-8">
@@ -101,7 +101,15 @@ export async function generateMetadata(props: {
   if (!page) notFound();
 
   const tags = (page.data.tags as string[]) || [];
-  const keywords = ["Sean Filimon", "Sean F", page.data.title, ...tags, "guide", "tutorial", "how-to"].join(", ");
+  const keywords = [
+    "Sean Filimon",
+    "Sean F",
+    page.data.title,
+    ...tags,
+    "guide",
+    "tutorial",
+    "how-to",
+  ].join(", ");
 
   return {
     title: page.data.title,

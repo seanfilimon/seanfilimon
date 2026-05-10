@@ -1,6 +1,20 @@
-import { blog, guides, articles, resources, events, projects, references as referencesSource } from "@/lib/source";
+import {
+  blog,
+  guides,
+  articles,
+  resources,
+  events,
+  projects,
+  research,
+  references as referencesSource,
+} from "@/lib/source";
 import { LandingPage } from "@/components/landing";
-import type { ContentItem, ProjectItem, ResourceInfo, ReferenceItem } from "@/components/landing";
+import type {
+  ContentItem,
+  ProjectItem,
+  ResourceInfo,
+  ReferenceItem,
+} from "@/components/landing";
 
 function getResourceMap(): Map<string, ResourceInfo> {
   const resourceMap = new Map<string, ResourceInfo>();
@@ -15,7 +29,24 @@ function getResourceMap(): Map<string, ResourceInfo> {
   return resourceMap;
 }
 
-function serialize<T extends { url: string; data: { title: unknown; date: unknown; description?: unknown; thumbnail?: unknown; icon?: unknown; tags?: unknown; difficulty?: unknown; category?: unknown; location?: unknown; eventDate?: unknown; resource?: unknown } }>(
+function serialize<
+  T extends {
+    url: string;
+    data: {
+      title: unknown;
+      date: unknown;
+      description?: unknown;
+      thumbnail?: unknown;
+      icon?: unknown;
+      tags?: unknown;
+      difficulty?: unknown;
+      category?: unknown;
+      location?: unknown;
+      eventDate?: unknown;
+      resource?: unknown;
+    };
+  },
+>(
   pages: T[],
   type: string,
   resourceMap?: Map<string, ResourceInfo>,
@@ -27,9 +58,12 @@ function serialize<T extends { url: string; data: { title: unknown; date: unknow
         new Date(String(a.data.date)).getTime(),
     )
     .map((p) => {
-      const resourceSlug = (p.data as Record<string, unknown>).resource as string | undefined;
-      const linkedResource = resourceSlug && resourceMap ? resourceMap.get(resourceSlug) : undefined;
-      
+      const resourceSlug = (p.data as Record<string, unknown>).resource as
+        | string
+        | undefined;
+      const linkedResource =
+        resourceSlug && resourceMap ? resourceMap.get(resourceSlug) : undefined;
+
       return {
         url: p.url,
         type,
@@ -52,12 +86,13 @@ function serialize<T extends { url: string; data: { title: unknown; date: unknow
 
 export default function HomePage() {
   const resourceMap = getResourceMap();
-  
+
   const blogItems = serialize(blog.getPages(), "blog", resourceMap);
   const guideItems = serialize(guides.getPages(), "guide", resourceMap);
   const articleItems = serialize(articles.getPages(), "article");
   const resourceItems = serialize(resources.getPages(), "resource");
   const eventItems = serialize(events.getPages(), "event");
+  const researchItems = serialize(research.getPages(), "research");
 
   const allContent = [
     ...blogItems,
@@ -65,6 +100,7 @@ export default function HomePage() {
     ...articleItems,
     ...resourceItems,
     ...eventItems,
+    ...researchItems,
   ].sort(
     (a, b) =>
       new Date(b.data.date ?? 0).getTime() -
@@ -101,10 +137,19 @@ export default function HomePage() {
         title: r.data.title as string,
         url,
         description: r.data.description as string | undefined,
-        source: (r.data.source as string | undefined) ?? domain.replace(/^www\./, ""),
-        favicon: (r.data.favicon as string | undefined) ?? `https://www.google.com/s2/favicons?domain=${domain}&sz=32`,
+        source:
+          (r.data.source as string | undefined) ?? domain.replace(/^www\./, ""),
+        favicon:
+          (r.data.favicon as string | undefined) ??
+          `https://www.google.com/s2/favicons?domain=${domain}&sz=32`,
       };
     });
 
-  return <LandingPage allContent={allContent} projects={projectItems} references={referenceItems} />;
+  return (
+    <LandingPage
+      allContent={allContent}
+      projects={projectItems}
+      references={referenceItems}
+    />
+  );
 }

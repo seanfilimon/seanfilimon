@@ -7,8 +7,14 @@ import {
   BookOpen,
   FolderKanban,
   Video,
+  FlaskConical,
 } from "lucide-react";
-import { IoLogoGithub, IoLogoLinkedin, IoLogoTwitter, IoLogoYoutube } from "react-icons/io5";
+import {
+  IoLogoGithub,
+  IoLogoLinkedin,
+  IoLogoTwitter,
+  IoLogoYoutube,
+} from "react-icons/io5";
 
 const iconProps = { size: 15, strokeWidth: 1.75 } as const;
 
@@ -27,9 +33,14 @@ const navTitle = (
 
 const navItems = [
   { text: "About", url: "/about", icon: <User {...iconProps} /> },
-  { text: "Experience", url: "/experience", icon: <Briefcase {...iconProps} /> },
+  {
+    text: "Experience",
+    url: "/experience",
+    icon: <Briefcase {...iconProps} />,
+  },
   { text: "Story", url: "/story", icon: <BookOpen {...iconProps} /> },
   { text: "Projects", url: "/projects", icon: <FolderKanban {...iconProps} /> },
+  { text: "Research", url: "/research", icon: <FlaskConical {...iconProps} /> },
   { text: "Videos", url: "/videos", icon: <Video {...iconProps} /> },
 ];
 
@@ -40,10 +51,26 @@ const stats = [
 ];
 
 const socials = [
-  { label: "GitHub", url: "https://github.com/seanfilimon", icon: <IoLogoGithub className="h-4 w-4" /> },
-  { label: "YouTube", url: "https://youtube.com/@SeanFilimon", icon: <IoLogoYoutube className="h-4 w-4" /> },
-  { label: "LinkedIn", url: "https://linkedin.com/in/seanfilimon", icon: <IoLogoLinkedin className="h-4 w-4" /> },
-  { label: "X", url: "https://x.com/SeanFilimon", icon: <IoLogoTwitter className="h-4 w-4" /> },
+  {
+    label: "GitHub",
+    url: "https://github.com/seanfilimon",
+    icon: <IoLogoGithub className="h-4 w-4" />,
+  },
+  {
+    label: "YouTube",
+    url: "https://youtube.com/@SeanFilimon",
+    icon: <IoLogoYoutube className="h-4 w-4" />,
+  },
+  {
+    label: "LinkedIn",
+    url: "https://linkedin.com/in/seanfilimon",
+    icon: <IoLogoLinkedin className="h-4 w-4" />,
+  },
+  {
+    label: "X",
+    url: "https://x.com/SeanFilimon",
+    icon: <IoLogoTwitter className="h-4 w-4" />,
+  },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {

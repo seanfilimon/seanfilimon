@@ -14,6 +14,7 @@ import {
   timelinePosts,
   experiencePosts,
   referencePosts,
+  researchPosts,
 } from "collections/server";
 
 export const source = loader({
@@ -34,6 +35,11 @@ export const guides = loader({
 export const articles = loader({
   baseUrl: "/articles",
   source: toFumadocsSource(articlePosts, []),
+});
+
+export const research = loader({
+  baseUrl: "/research",
+  source: toFumadocsSource(researchPosts, []),
 });
 
 export const resources = loader({

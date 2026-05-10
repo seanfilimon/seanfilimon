@@ -24,10 +24,10 @@ export default async function ResourcePage(props: {
           <div className="min-w-0 flex-1">
             <div className="mb-8">
               <Link
-                href="/resources"
+                href="/"
                 className="text-sm text-fd-muted-foreground hover:text-fd-foreground"
               >
-                &larr; Back to resources
+                &larr; Back
               </Link>
             </div>
             {page.data.thumbnail && (

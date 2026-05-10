@@ -24,10 +24,10 @@ export default async function ArticlePage(props: {
           <div className="min-w-0 flex-1">
             <div className="mb-8">
               <Link
-                href="/articles"
+                href="/"
                 className="text-sm text-fd-muted-foreground hover:text-fd-foreground"
               >
-                &larr; Back to articles
+                &larr; Back
               </Link>
             </div>
             {page.data.thumbnail && (
@@ -111,7 +111,14 @@ export async function generateMetadata(props: {
   if (!page) notFound();
 
   const tags = (page.data.tags as string[]) || [];
-  const keywords = ["Sean Filimon", "Sean F", page.data.title, ...tags, "article", "engineering"].join(", ");
+  const keywords = [
+    "Sean Filimon",
+    "Sean F",
+    page.data.title,
+    ...tags,
+    "article",
+    "engineering",
+  ].join(", ");
 
   return {
     title: page.data.title,
