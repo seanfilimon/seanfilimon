@@ -7,6 +7,7 @@ import { research } from "@/lib/source";
 import { siteUrl } from "@/lib/metadata";
 import { TOCProvider, TOCScrollArea } from "fumadocs-ui/components/toc";
 import { ContentTOC } from "@/components/content-toc";
+import { SocialGate } from "@/components/social-gate";
 
 export default async function ResearchDetailPage(props: {
   params: Promise<{ slug: string }>;
@@ -60,9 +61,11 @@ export default async function ResearchDetailPage(props: {
                 </span>
               </div>
             </header>
-            <article className="prose min-w-0">
-              <Mdx components={defaultMdxComponents} />
-            </article>
+            <SocialGate>
+              <article className="prose min-w-0">
+                <Mdx components={defaultMdxComponents} />
+              </article>
+            </SocialGate>
             <script
               type="application/ld+json"
               suppressHydrationWarning
@@ -111,7 +114,14 @@ export async function generateMetadata(props: {
   if (!page) notFound();
 
   const tags = (page.data.tags as string[]) || [];
-  const keywords = ["Sean Filimon", "AI research", page.data.title, ...tags, "findings", "discovery"].join(", ");
+  const keywords = [
+    "Sean Filimon",
+    "AI research",
+    page.data.title,
+    ...tags,
+    "findings",
+    "discovery",
+  ].join(", ");
 
   return {
     title: page.data.title,

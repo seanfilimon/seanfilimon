@@ -7,6 +7,7 @@ import { articles } from "@/lib/source";
 import { siteUrl } from "@/lib/metadata";
 import { TOCProvider, TOCScrollArea } from "fumadocs-ui/components/toc";
 import { ContentTOC } from "@/components/content-toc";
+import { SocialGate } from "@/components/social-gate";
 
 export default async function ArticlePage(props: {
   params: Promise<{ slug: string }>;
@@ -60,9 +61,11 @@ export default async function ArticlePage(props: {
                 </span>
               </div>
             </header>
-            <article className="prose min-w-0">
-              <Mdx components={defaultMdxComponents} />
-            </article>
+            <SocialGate>
+              <article className="prose min-w-0">
+                <Mdx components={defaultMdxComponents} />
+              </article>
+            </SocialGate>
             <script
               type="application/ld+json"
               suppressHydrationWarning
