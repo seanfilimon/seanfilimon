@@ -501,6 +501,12 @@ function HeroSection() {
 
 const ITEMS_PER_PAGE = 18;
 
+/* Stretch a short last row's final card across the columns left empty: two
+   columns from sm to lg, three from lg. Each rule is scoped to its own range
+   so the two-column span never leaks into the three-column grid. */
+const FILL_LAST_ROW =
+  "sm:max-lg:[&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(3n+1)]:col-span-3 lg:[&>*:last-child:nth-child(3n+2)]:col-span-2";
+
 function getGridClasses(itemCount: number): string {
   if (itemCount === 1) {
     return "grid grid-cols-1";
@@ -805,7 +811,7 @@ function ProjectsSection({
           className={
             layout === "list"
               ? "flex flex-col gap-px overflow-hidden border border-fd-border bg-fd-border"
-              : `${getGridClasses(projects.length)} gap-px overflow-hidden border border-fd-border bg-fd-border`
+              : `${getGridClasses(projects.length)} ${FILL_LAST_ROW} gap-px overflow-hidden border border-fd-border bg-fd-border`
           }
         >
           {projects.map((project) => (
@@ -851,13 +857,13 @@ function ProjectsSection({
                   className="group relative flex h-full min-h-[180px] flex-col bg-fd-card p-6 transition-colors hover:bg-fd-accent/30"
                 >
                   <div className="mb-5 flex items-start justify-between gap-3">
-                    <div className="flex h-8 min-w-0 flex-1 items-center">
+                    <div className="flex h-6 min-w-0 flex-1 items-center">
                       {project.logo ? (
                         <Image
                           src={project.logo}
                           alt={project.name}
-                          width={120}
-                          height={32}
+                          width={144}
+                          height={24}
                           className="h-full w-auto max-w-full object-contain opacity-60 transition-opacity group-hover:opacity-100"
                         />
                       ) : (

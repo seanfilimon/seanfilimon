@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   IoFolderOpenOutline, 
@@ -174,75 +174,64 @@ function ProjectSelector({
   selectedProject: string | null;
   onSelect: (slug: string | null) => void;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    
-    const activeIndex = selectedProject 
-      ? projects.findIndex(p => p.slug === selectedProject) + 1 
-      : 0;
-    
-    const buttons = containerRef.current.querySelectorAll('button');
-    const activeButton = buttons[activeIndex];
-    
-    if (activeButton) {
-      setIndicatorStyle({
-        left: activeButton.offsetLeft,
-        width: activeButton.offsetWidth,
-      });
-    }
-  }, [selectedProject, projects]);
-
   return (
-    <div 
-      ref={containerRef}
-      className="relative flex flex-wrap gap-2 border border-fd-border bg-fd-card p-2"
-    >
-      <motion.div
-        layoutId="project-indicator"
-        className="absolute top-2 h-[calc(100%-16px)] border border-fd-foreground bg-fd-accent/50"
-        initial={false}
-        animate={{
-          left: indicatorStyle.left,
-          width: indicatorStyle.width,
-        }}
-        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-      />
-      
-      <button
-        onClick={() => onSelect(null)}
-        className={`relative z-10 px-4 py-2 text-sm font-medium transition-colors ${
-          !selectedProject ? "text-fd-foreground" : "text-fd-muted-foreground hover:text-fd-foreground"
-        }`}
-      >
-        All Projects
-      </button>
-      
-      {projects.map((project) => (
+    <div>
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <h2 className="text-sm font-medium text-fd-muted-foreground">Filter by project</h2>
         <button
-          key={project.slug}
-          onClick={() => onSelect(selectedProject === project.slug ? null : project.slug)}
-          className={`relative z-10 flex items-center gap-3 px-4 py-2 transition-colors ${
-            selectedProject === project.slug ? "text-fd-foreground" : "text-fd-muted-foreground hover:text-fd-foreground"
+          onClick={() => onSelect(null)}
+          aria-pressed={!selectedProject}
+          className={`text-sm font-medium transition-colors ${
+            !selectedProject ? "text-fd-foreground" : "text-fd-muted-foreground hover:text-fd-foreground"
           }`}
         >
-          {project.logo ? (
-            <Image
-              src={project.logo}
-              alt={project.name}
-              width={80}
-              height={20}
-              className={`h-5 w-auto max-w-[80px] object-contain transition-opacity ${
-                selectedProject === project.slug ? "opacity-100" : "opacity-50"
-              }`}
-            />
-          ) : (
-            <span className="text-sm font-medium">{project.name}</span>
-          )}
+          All projects
         </button>
-      ))}
+      </div>
+
+      {/* Equal cells, so every logo sits on the same grid whatever its width:
+          one row from lg, three across from sm, two on a phone (where an odd
+          last cell takes the full row). */}
+      <div
+        style={{ "--project-count": projects.length } as React.CSSProperties}
+        className="grid grid-cols-2 gap-px border border-fd-border bg-fd-border sm:grid-cols-3 lg:grid-cols-[repeat(var(--project-count),minmax(0,1fr))] max-sm:[&>*:last-child:nth-child(odd)]:col-span-2"
+      >
+        {projects.map((project) => {
+          const selected = selectedProject === project.slug;
+          return (
+            <button
+              key={project.slug}
+              onClick={() => onSelect(selected ? null : project.slug)}
+              aria-pressed={selected}
+              aria-label={project.name}
+              className={`group relative flex h-16 items-center justify-center px-3 transition-colors ${
+                selected ? "bg-fd-accent" : "bg-fd-card hover:bg-fd-accent/40"
+              }`}
+            >
+              {selected && (
+                <motion.span
+                  layoutId="project-indicator"
+                  className="absolute inset-0 border border-fd-foreground"
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
+              {project.logo ? (
+                <Image
+                  src={project.logo}
+                  alt=""
+                  width={120}
+                  height={20}
+                  className={`h-5 w-auto max-w-full object-contain transition-opacity ${
+                    selected ? "opacity-100" : "opacity-50 group-hover:opacity-80"
+                  }`}
+                />
+              ) : (
+                <span className="text-sm font-medium">{project.name}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -334,7 +323,6 @@ export function ProjectsClient({ projects, content }: { projects: ProjectItem[];
 
       {/* Projects selector with sliding indicator */}
       <div className="mb-6">
-        <h2 className="mb-3 text-sm font-medium text-fd-muted-foreground">Filter by project</h2>
         <ProjectSelector 
           projects={projects}
           selectedProject={selectedProject}

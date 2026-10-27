@@ -38,7 +38,6 @@ New Jersey, Tennessee, Florida, Texas, Florida (again), California.
 | Better IAM | Creator | September 2026 | Open Source | Embeddable TypeScript authentication, identity provisioning, and access management. Runs in your app with your database. |
 | Better Compute | Creator | October 2026 | Open Source | Embeddable TypeScript control plane for GPU, CPU, and bare-metal capacity. Built on Better IAM. |
 | Better Files | Creator | October 2026 | Open Source | Embeddable data rooms for TypeScript applications. Built on Better IAM. |
-| MD Software | Creator | January 2024 | Stealth | Software solutions for the medical industry |
 | OpticEngine | Creator | March 2024 | Stealth | Backend server engine for building and scaling systems |
 
 LegionEdge is the parent company. Nokuva, Foltrac, Tavoc, and W0rktree are products under LegionEdge.
@@ -48,7 +47,7 @@ LegionEdge is the parent company. Nokuva, Foltrac, Tavoc, and W0rktree are produ
 - Brian Mutungi (Nokuva)
 - Josh Wyant (W0rktree, Nokuva)
 - Owen Rossi (Nokuva)
-- Nicholas Angelastro (MD Software, OpticEngine)
+- Nicholas Angelastro (OpticEngine)
 
 ---
 
