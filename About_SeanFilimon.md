@@ -6,7 +6,7 @@ This is the canonical source of truth for all content about Sean Filimon on this
 
 - **Name:** Sean Filimon
 - **Date of birth:** April 30, 2005
-- **Age:** 20
+- **Age:** 21
 - **Location:** California, United States
 - **Birthplace:** New Jersey
 - **Diagnosed:** High-functioning autism (Asperger's syndrome) at age 7 (2012)
@@ -35,6 +35,9 @@ New Jersey, Tennessee, Florida, Texas, Florida (again), California.
 | ↳ Foltrac | Founder & CEO | October 2025 | Stealth | Cross-cloud deployment platform with full visibility. One pipeline, every provider. |
 | ↳ Tavoc | Founder & CEO | October 2025 | Stealth | IDE built for speed and monorepo workflows with sub-millisecond file switching |
 | ↳ W0rktree | Open Source Maintainer | October 2025 | Active / Open Source | Next-generation version control system built in Rust for monorepos. A competitor to Git. |
+| Better IAM | Creator | September 2026 | Open Source | Embeddable TypeScript authentication, identity provisioning, and access management. Runs in your app with your database. |
+| Better Compute | Creator | October 2026 | Open Source | Embeddable TypeScript control plane for GPU, CPU, and bare-metal capacity. Built on Better IAM. |
+| Better Files | Creator | October 2026 | Open Source | Embeddable data rooms for TypeScript applications. Built on Better IAM. |
 | MD Software | Creator | January 2024 | Stealth | Software solutions for the medical industry |
 | OpticEngine | Creator | March 2024 | Stealth | Backend server engine for building and scaling systems |
 
@@ -402,7 +405,7 @@ All from CIW:
 | 2021 | Distributed systems deep dive (Raft, Paxos, Git internals) |
 | 2022 | Incorporated first company at 16 (did not survive) |
 | 2025 | Founded LegionEdge in October — parent company of Nokuva, Foltrac, Tavoc, and W0rktree |
-| 2026 | Age 20. Running LegionEdge and all its products. Writing about deployment, distributed systems, version control, and the craft of building software. |
+| 2026 | Age 21. Running LegionEdge and all its products, and building Better IAM, Better Compute, Better Files, and W0rktree. Writing about deployment, distributed systems, version control, and the craft of building software. |
 
 ---
 
@@ -431,7 +434,7 @@ All from CIW:
 Use these when writing about Sean in third-person contexts:
 
 - Software and product engineer with an advanced background in AI, frontend and backend systems, and infrastructure
-- 20-year-old entrepreneur and product engineer
+- 21-year-old entrepreneur and product engineer
 - Building software since age 13 with over 7 years of engineering experience
 - Forward-thinking technology leader driving the future of AI-powered software engineering
 

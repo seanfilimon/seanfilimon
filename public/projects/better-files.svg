@@ -1,0 +1,7 @@
+<svg width="180" height="40" viewBox="0 0 180 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Icon: Folder with lock -->
+  <path d="M8 12 C8 10.9 8.9 10 10 10 H16 L19 13 H30 C31.1 13 32 13.9 32 15 V29 C32 30.1 31.1 31 30 31 H10 C8.9 31 8 30.1 8 29 Z" stroke="white" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+  <rect x="16.5" y="21" width="7" height="6" rx="1" stroke="white" stroke-width="1.5" fill="none"/>
+  <path d="M18 21 V19.5 C18 18.4 18.9 17.5 20 17.5 C21.1 17.5 22 18.4 22 19.5 V21" stroke="white" stroke-width="1.5" fill="none"/>
+  <text x="44" y="24" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="white">Better Files</text>
+</svg>

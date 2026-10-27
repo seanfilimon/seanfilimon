@@ -1,0 +1,44 @@
+---
+title: Better IAM
+description: An embeddable TypeScript authentication, identity provisioning, and access-management platform. Runs in your application with your database.
+role: Creator
+status: Open Source
+tagline: Embeddable identity and access management for TypeScript
+logo: /projects/better-iam.svg
+date: 2026-10-27
+stack:
+  - TypeScript
+  - Node.js
+  - PostgreSQL
+  - SQLite
+  - libSQL / Turso
+  - OAuth / OIDC
+  - SAML
+  - SCIM
+  - Passkeys
+highlights:
+  - Tenant trees with isolated identity directories, invitations, account linking, and retention purging
+  - Configurable resource catalog with typed attributes, relationship tuples, custom roles, and versioned JSON policies
+  - Just-in-time eligible bindings, access requests, access reviews, and configuration as code
+  - Passwords, magic links, email/SMS codes, TOTP, passkeys, and per-tenant authentication policies
+  - STS-style temporary credentials with AssumeRole parity and OIDC web-identity federation
+  - Signed session JWTs with JWKS and key rotation, verifiable offline by other services
+  - OAuth/OIDC sign-in and provider, SAML SSO, and SCIM Users/Groups
+  - Tamper-evident hash-chained audit log, signed webhooks, and Prometheus metrics
+  - Integrations for Next.js, NestJS, Nuxt, SvelteKit, React Router, Express, Hono, and Fastify
+people:
+  - Sean Filimon
+tags:
+  - open-source
+  - identity
+  - security
+  - typescript
+---
+
+Better IAM is an embeddable authentication, identity provisioning, and access-management platform for TypeScript. You install it from npm, point it at your own database, and it runs inside your application — no separate hosted identity service to call out to.
+
+It covers the whole identity surface in one library: multi-tenant directories, sign-in methods from passwords to passkeys, enterprise SSO and SCIM, fine-grained authorization with roles and policies, temporary credentials, and a tamper-evident audit log.
+
+Better IAM is also the foundation for [Better Compute](/projects/better-compute) and [Better Files](/projects/better-files), which use it as their identity provider and policy decision point.
+
+[GitHub](https://github.com/Better-IAM/better-iam) · [better-iam.com](https://better-iam.com)

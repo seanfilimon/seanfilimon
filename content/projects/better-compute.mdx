@@ -1,0 +1,37 @@
+---
+title: Better Compute
+description: An embeddable TypeScript control plane for GPU, CPU, and bare-metal capacity. Tracks what hardware exists, what is free, and who holds it, with double-booking impossible by construction.
+role: Creator
+status: Open Source
+tagline: An embeddable control plane for GPU, CPU, and bare-metal capacity
+logo: /projects/better-compute.svg
+date: 2026-10-27
+stack:
+  - TypeScript
+  - Node.js
+  - PostgreSQL
+  - gRPC
+  - PXE
+  - MCP
+highlights:
+  - Database-refereed reservations so double-booking is impossible by construction
+  - Reserve whole GPUs, MIG slices, or gangs of nodes through one typed API, a CLI, or MCP tools
+  - Adopt running servers, deploy images over PXE, and run VPSs or sandboxes on your own hosts
+  - Provider support for Hetzner Cloud, Proxmox VE, Google Compute Engine, and DigitalOcean
+  - Hand cloud VMs and reservations to customer tenants with their own networks and firewall rules
+  - Better IAM as identity provider, policy decision point, and billing ledger
+  - Full local control plane with simulated HGX H100 machines via `better-compute dev`
+people:
+  - Sean Filimon
+tags:
+  - open-source
+  - infrastructure
+  - gpu
+  - typescript
+---
+
+Better Compute is an embeddable control plane for GPU, CPU, and bare-metal capacity. It tracks what hardware exists, what is free, and who holds it — and the database referees every booking, so double-booking is impossible by construction.
+
+It also makes machines useful: adopt a running server, deploy an image over PXE, run a VPS or a sandbox on your own hosts or a provider's, and hand capacity to customer tenants with their own networks and firewall rules. [Better IAM](/projects/better-iam) handles identity, authorization, and billing.
+
+[GitHub](https://github.com/Better-Compute/better-compute) · [better-compute.com](https://better-compute.com/docs/guides)

@@ -4,7 +4,7 @@ This document defines the voice, tone, and editorial standards for seanfilimon.c
 
 ## Who Is Sean Filimon
 
-Sean Filimon is a 20-year-old entrepreneur and product engineer born April 30, 2005. He has been building software since he was 13 and has accumulated over 7 years of engineering experience. He is based in the United States.
+Sean Filimon is a 21-year-old entrepreneur and product engineer born April 30, 2005. He has been building software since he was 13 and has accumulated over 7 years of engineering experience. He is based in the United States.
 
 ### Companies & Projects
 

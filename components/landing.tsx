@@ -415,10 +415,18 @@ function HeroSection() {
             <span className="font-medium text-fd-foreground">LegionEdge</span>
             &mdash;parent company of{" "}
             <span className="font-medium text-fd-foreground">Nokuva</span>,{" "}
-            <span className="font-medium text-fd-foreground">W0rktree</span>,{" "}
             <span className="font-medium text-fd-foreground">Foltrac</span>, and{" "}
-            <span className="font-medium text-fd-foreground">Tavoc</span>. If a
-            tool doesn&apos;t exist and it should, I build it. If a process is
+            <span className="font-medium text-fd-foreground">Tavoc</span>.
+            Right now I&apos;m building{" "}
+            <span className="font-medium text-fd-foreground">Better IAM</span>,{" "}
+            <span className="font-medium text-fd-foreground">
+              Better Compute
+            </span>
+            ,{" "}
+            <span className="font-medium text-fd-foreground">Better Files</span>
+            , and{" "}
+            <span className="font-medium text-fd-foreground">W0rktree</span>. If
+            a tool doesn&apos;t exist and it should, I build it. If a process is
             painful and it doesn&apos;t have to be, I fix it.
           </motion.p>
 
