@@ -95,6 +95,8 @@ export const projectPosts = defineCollections({
     role: z.string(),
     status: z.enum(["Active", "Open Source", "Stealth"]),
     tagline: z.string(),
+    /** Position in project lists, lowest first; unordered projects follow, newest first. */
+    order: z.number().optional(),
     date: z.string().date().or(z.date()),
     logo: z.string().optional(),
     banner: z.string().optional(),

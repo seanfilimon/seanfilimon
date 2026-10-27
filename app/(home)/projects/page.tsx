@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { projects, blog, articles, guides } from "@/lib/source";
+import { orderedProjects, blog, articles, guides } from "@/lib/source";
 import { ProjectsClient } from "./client";
 
 export const metadata: Metadata = {
@@ -36,13 +36,7 @@ export default function ProjectsIndex() {
   const allProjects: ProjectItem[] = [];
   const allContent: ContentItem[] = [];
 
-  projects
-    .getPages()
-    .sort(
-      (a, b) =>
-        new Date(b.data.date as string).getTime() -
-        new Date(a.data.date as string).getTime(),
-    )
+  orderedProjects()
     .forEach((p) => {
       const projectSlug = p.slugs[0];
       const projectName = p.data.title;

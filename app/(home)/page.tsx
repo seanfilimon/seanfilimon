@@ -4,7 +4,7 @@ import {
   articles,
   resources,
   events,
-  projects,
+  orderedProjects,
   research,
   references as referencesSource,
 } from "@/lib/source";
@@ -107,13 +107,7 @@ export default function HomePage() {
       new Date(a.data.date ?? 0).getTime(),
   );
 
-  const projectItems: ProjectItem[] = projects
-    .getPages()
-    .sort(
-      (a, b) =>
-        new Date(b.data.date as string).getTime() -
-        new Date(a.data.date as string).getTime(),
-    )
+  const projectItems: ProjectItem[] = orderedProjects()
     .map((p) => ({
       url: p.url,
       name: p.data.title as string,

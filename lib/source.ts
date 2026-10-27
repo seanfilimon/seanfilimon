@@ -82,4 +82,18 @@ export const references = loader({
   source: toFumadocsSource(referencePosts, []),
 });
 
+/** Projects in display order: by `order`, then unordered ones newest first. */
+export function orderedProjects() {
+  const rank = (order: unknown) =>
+    typeof order === "number" ? order : Number.POSITIVE_INFINITY;
+  return projects
+    .getPages()
+    .sort(
+      (a, b) =>
+        rank(a.data.order) - rank(b.data.order) ||
+        new Date(b.data.date as string).getTime() -
+          new Date(a.data.date as string).getTime(),
+    );
+}
+
 export type DocsPage = InferPageType<typeof source>;
