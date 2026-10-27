@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { IoLogoYoutube, IoPlayOutline } from "react-icons/io5";
+import { IoLogoYoutube } from "react-icons/io5";
 
 export const metadata: Metadata = {
   title: "Videos",
@@ -9,6 +9,13 @@ export const metadata: Metadata = {
 };
 
 const YOUTUBE_CHANNEL = "https://youtube.com/@SeanFilimon";
+
+const FEATURED = {
+  id: "RqnZIJA4kbM",
+  title: "LegionEdge advances custom AI models with AMD",
+  description:
+    "AMD's video on LegionEdge and the custom AI models we build, published on AMD's YouTube channel.",
+};
 
 export default function VideosPage() {
   return (
@@ -33,21 +40,34 @@ export default function VideosPage() {
         </a>
       </div>
 
-      <div className="rounded-lg border border-fd-border bg-fd-muted/20 p-12 text-center">
-        <IoPlayOutline className="mx-auto h-16 w-16 text-fd-muted-foreground/50" />
-        <h2 className="mt-4 text-lg font-semibold">Videos Coming Soon</h2>
-        <p className="mt-2 text-sm text-fd-muted-foreground">
-          Check back later for video content, or subscribe to my YouTube channel to get notified when new videos are posted.
+      <section aria-labelledby="featured-video" className="max-w-4xl">
+        <p className="text-xs font-medium uppercase tracking-widest text-fd-muted-foreground">
+          Featured
         </p>
+        <h2 id="featured-video" className="mt-2 text-xl font-semibold tracking-tight">
+          {FEATURED.title}
+        </h2>
+        <p className="mt-2 text-fd-muted-foreground">{FEATURED.description}</p>
+        <div className="relative mt-6 aspect-video overflow-hidden rounded-lg border border-fd-border bg-black">
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${FEATURED.id}?rel=0`}
+            title={FEATURED.title}
+            loading="lazy"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            className="absolute inset-0 h-full w-full"
+          />
+        </div>
         <a
-          href={YOUTUBE_CHANNEL}
+          href={`https://www.youtube.com/watch?v=${FEATURED.id}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-6 inline-flex items-center gap-2 text-sm text-fd-muted-foreground transition-colors hover:text-fd-foreground"
+          className="mt-4 inline-flex items-center gap-2 text-sm text-fd-muted-foreground transition-colors hover:text-fd-foreground"
         >
-          Visit YouTube Channel →
+          Watch on YouTube →
         </a>
-      </div>
+      </section>
     </main>
   );
 }

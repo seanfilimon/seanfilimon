@@ -383,7 +383,7 @@ function ProjectsSection({ projects }: { projects: ExperienceProject[] }) {
 
             <motion.div
               variants={stagger}
-              className="grid gap-px bg-fd-border sm:grid-cols-2"
+              className="grid gap-px bg-fd-border sm:grid-cols-2 sm:[&>*:last-child:nth-child(odd)]:col-span-2"
             >
               {rest.map((project) => (
                 <motion.div
