@@ -75,6 +75,11 @@ const POSITIONS: { label: string; test: (c: Connection) => boolean }[] = [
     test: (c) => /\b(vp|svp|evp|cvp|vice president)\b/i.test(c.position),
   },
   {
+    label: "Military officers",
+    test: (c) =>
+      /\b(brigadier|major|lieutenant) general\b|\b(colonel|admiral|lt\.? col)\b/i.test(c.position),
+  },
+  {
     label: "Directors, heads of function and general managers",
     test: (c) => /\b(director|head of|general manager)\b/i.test(c.position),
   },
@@ -286,6 +291,14 @@ function build() {
     positions[POSITIONS.findIndex(({ test }) => test(person))].people.push(person);
   }
 
+  // A title match is for people outside government: an Air Force officer whose
+  // title says "Defense" is not a contractor.
+  const governmentKeys = new Set(
+    PUBLIC_SECTOR.filter((sector) => !sector.contractor).flatMap((sector) =>
+      sector.organizations.map(organizationKey),
+    ),
+  );
+
   const publicSector = PUBLIC_SECTOR.map((sector) => {
     const keys = new Set(sector.organizations.map(organizationKey));
     return {
@@ -294,7 +307,8 @@ function build() {
       people: listed.filter(
         (person) =>
           keys.has(organizationKey(person.company)) ||
-          (sector.position?.test(person.position) ?? false) ||
+          (!governmentKeys.has(organizationKey(person.company)) &&
+            (sector.position?.test(person.position) ?? false)) ||
           FORMER_SERVICE.some(
             (former) => former.sector === sector.label && former.name === person.name,
           ),

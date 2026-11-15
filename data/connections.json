@@ -1,4 +1,7 @@
 [
+  {"name": "Peter Burns", "company": "United States Air Force", "position": "Aviation, Tech, & Defense", "connected": "2026-11-14"},
+  {"name": "Param Mehta", "company": "OpenScaffold (YC F26)", "position": "Co-Founder", "connected": "2026-11-13"},
+  {"name": "Doug \"Beaker\" Wickert", "company": "United States Air Force", "position": "Brigadier General", "connected": "2026-11-13"},
   {"name": "Solar Rezaei", "company": "Cerebras", "position": "Engineer (Technical Product Manager)", "connected": "2026-11-13"},
   {"name": "Charlie Kawwas", "company": "Broadcom Inc.", "position": "President", "connected": "2026-11-13"},
   {"name": "Justin Ross", "company": "AI Accelerator", "position": "Deputy Director", "connected": "2026-11-13"},
