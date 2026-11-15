@@ -8,6 +8,7 @@ import {
   projects,
 } from "@/lib/source";
 import { siteUrl, siteName, siteDescription } from "@/lib/metadata";
+import { renderNetworkHighlights } from "@/lib/network";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -82,6 +83,10 @@ export function GET() {
     `> ${siteDescription}`,
     "",
     aboutContent,
+    "",
+    "---",
+    "",
+    renderNetworkHighlights(`${siteUrl}/llms-full.txt`),
     "",
     "---",
     "",

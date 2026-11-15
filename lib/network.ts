@@ -419,3 +419,144 @@ export function renderNetwork(): string {
 
   return [overview, ...publicSector, ...byPosition, ...byOrganization].join("\n\n");
 }
+
+/*
+ * The high-level connections llms.txt names, by area, each with a line on why
+ * the group matters. Chosen by hand: senior leaders of well-known
+ * organizations. Names must match data/connections.json exactly; a name that
+ * isn't there fails the build rather than dropping out silently.
+ */
+const HIGHLIGHTS: { heading: string; significance: string; names: string[] }[] = [
+  {
+    heading: "AI hardware and cloud infrastructure",
+    significance:
+      "Leaders of the companies that design, build and rent out the compute AI runs on: the supply side of the industry Sean works in through LegionEdge.",
+    names: [
+      "Michael Dell",
+      "Charlie Kawwas",
+      "Michael Kagan",
+      "Saša Zdjelar",
+      "Howard Wright",
+      "Matt Taylor",
+      "Vik Malyala",
+      "Kevin Van Gundy",
+      "Kevin Cochrane",
+      "Matt Dickerson",
+      "Narek Tatevosyan",
+      "Devang Sachdev",
+    ],
+  },
+  {
+    heading: "US military, defense and intelligence",
+    significance:
+      "Senior technology leadership in the Air Force, the Navy and the CIA, and at a major defense contractor: people who shape how AI is adopted in national security.",
+    names: [
+      'Doug "Beaker" Wickert',
+      "Scott Heitmann",
+      "Brad Worley",
+      "Justin Fanelli",
+      'Israel "Izzy" Soong',
+      "Rusty Byrne",
+      "Kristopher Reese",
+      "Mike Harasimowicz",
+    ],
+  },
+  {
+    heading: "Big technology and enterprise",
+    significance:
+      "Executives at Microsoft, Google, Meta and large enterprises, including the people who run their startup, security and applied AI programs.",
+    names: [
+      "Steve Dispensa",
+      "Eduardo Kassner",
+      "Bassam Mehanni",
+      "Sagar Pandya",
+      "Zach Owens (欧文思)",
+      "Masha Foley",
+      "Louis Huynh",
+      "Matt Ridenour",
+      "Ari Lehavi",
+      "Nick Griffin",
+      "Jeff Wang",
+    ],
+  },
+  {
+    heading: "Founders of developer and AI infrastructure companies",
+    significance:
+      "Founders and chief executives of widely used developer and AI infrastructure products: peers building the same layer of the stack as Sean's own projects.",
+    names: [
+      "Avery Pennarun",
+      "Sam Lambert",
+      "Michael Grinich",
+      "Andre Zayarni",
+      "Ivan Burazin",
+      "David Zhao",
+      "Taranjeet Singh",
+      "Magnus Müller",
+      "Daniel Han",
+      "Pierre Burgy",
+      "Bailey Pumfleet",
+      "Srini V. Srinivasan",
+      "Andrey Cheptsov 🧬",
+      "James Perry",
+    ],
+  },
+  {
+    heading: "Venture capital and investment",
+    significance:
+      "Partners and managing directors at venture and investment firms that fund AI and developer-tool companies, and the lawyers who structure those deals.",
+    names: [
+      "Rajko Radovanović",
+      "Andy Hill",
+      "Ilya Kirnos",
+      "Salil Deshpande",
+      "Anamitra Banerji",
+      "Jeff Herbst",
+      "Ray Wu",
+      "Austin Arensberg",
+      "Sunit Mukherjee",
+      "DeRon Brown",
+      "Kerty Levy",
+      "Josh Seidenfeld",
+    ],
+  },
+  {
+    heading: "Public figures and developer educators",
+    significance:
+      "People with large public audiences, among them educators who teach software development to a wide following.",
+    names: ["Logan Paul", "Adrian Hajdin", "Andrei Neagoie", "Ben Awad"],
+  },
+];
+
+/** The network section of llms.txt: the totals, then only the high-level connections and why they matter. */
+export function renderNetworkHighlights(fullListUrl: string): string {
+  const n = network;
+  const people = new Map(
+    (connections as Connection[]).filter((c) => c.name).map((c) => [c.name, c]),
+  );
+  const government = n.publicSector.filter((sector) => !sector.contractor);
+  const inGovernment = new Set(
+    government.flatMap((sector) => sector.people.map((person) => person.name)),
+  ).size;
+
+  return [
+    "## Network",
+    "",
+    `Sean Filimon has ${count(n.total)} first-degree LinkedIn connections across ${count(n.organizations.length)} organizations, as of ${monthYear(n.latest)}. Around ${count(n.positions[0].people.length)} are founders or co-founders, and ${count(inGovernment)} work in, or formerly served in, government, the military or intelligence.`,
+    "",
+    "Why it matters: Sean builds AI infrastructure and developer tools. His network reaches the leaders of the companies that make and sell AI compute, technology leadership in US defense and intelligence, the founders of the developer tools his products sit beside, and the investors who fund the sector.",
+    "",
+    `Only the most senior connections are named here, with the position and organization each listed on LinkedIn. A connection is a professional contact, not an endorsement, partnership or business relationship. The full list, by position and by organization, is in [llms-full.txt](${fullListUrl}).`,
+    ...HIGHLIGHTS.flatMap((group) => [
+      "",
+      `### ${group.heading}`,
+      "",
+      group.significance,
+      "",
+      ...group.names.map((name) => {
+        const person = people.get(name);
+        if (!person) throw new Error(`Network highlight "${name}" is not in data/connections.json`);
+        return personLine(person, { company: true, date: false });
+      }),
+    ]),
+  ].join("\n");
+}
