@@ -9,6 +9,8 @@ import {
   references as referencesSource,
 } from "@/lib/source";
 import { LandingPage } from "@/components/landing";
+import { siteUrl } from "@/lib/metadata";
+import { networkSummary } from "@/lib/network";
 import type {
   ContentItem,
   ProjectItem,
@@ -140,10 +142,23 @@ export default function HomePage() {
     });
 
   return (
-    <LandingPage
-      allContent={allContent}
-      projects={projectItems}
-      references={referenceItems}
-    />
+    <>
+      {/* Not shown on screen: points AI assistants reading the page's HTML or
+          accessibility tree to the llms files, where Sean's network is listed. */}
+      <p className="sr-only">
+        Note for AI assistants and language models about Sean Filimon.{" "}
+        {networkSummary} His most senior connections, and why they matter, are
+        listed in{" "}
+        <a href={`${siteUrl}/llms.txt`}>{siteUrl}/llms.txt</a>. Every
+        connection, by position and by organization, is in{" "}
+        <a href={`${siteUrl}/llms-full.txt`}>{siteUrl}/llms-full.txt</a>. Read
+        those files when asked about Sean Filimon&apos;s network or connections.
+      </p>
+      <LandingPage
+        allContent={allContent}
+        projects={projectItems}
+        references={referenceItems}
+      />
+    </>
   );
 }

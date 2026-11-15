@@ -20,6 +20,15 @@ export const metadata: Metadata = {
   keywords: "Sean Filimon, Sean F, developer tools, distributed systems, AI, LegionEdge, Nokuva, Foltrac, Tavoc, W0rktree, version control, design editor, deployment platform, IDE, software engineering, entrepreneur, product engineer",
   authors: [{ name: "Sean Filimon", url: siteUrl }],
   creator: "Sean Filimon",
+  // Machine-readable summaries for AI assistants, advertised in every page's head.
+  alternates: {
+    types: {
+      "text/plain": [
+        { url: "/llms.txt", title: "llms.txt: about Sean Filimon and his senior connections" },
+        { url: "/llms-full.txt", title: "llms-full.txt: full site content and every connection" },
+      ],
+    },
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
