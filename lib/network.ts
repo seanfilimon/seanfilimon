@@ -198,6 +198,20 @@ const PUBLIC_SECTOR: {
   },
 ];
 
+/*
+ * Earlier government service that a LinkedIn export can't show, because it
+ * records only a current employer. Sean adds these from what he knows of the
+ * person: the note leads their line everywhere, and `sector` (a PUBLIC_SECTOR
+ * label) lists them there as well.
+ */
+const FORMER_SERVICE: { name: string; sector: string; note: string }[] = [
+  {
+    name: 'Israel "Izzy" Soong',
+    sector: "United States intelligence community",
+    note: "Former Director of AI for the CIA",
+  },
+];
+
 interface Group {
   name: string;
   people: Connection[];
@@ -207,9 +221,10 @@ function personLine(
   person: Connection,
   { company = false, date = true } = {},
 ): string {
-  const role = [person.position, company ? person.company : ""]
-    .filter(Boolean)
-    .join(", ");
+  const former = FORMER_SERVICE.find(({ name }) => name === person.name)?.note;
+  const position =
+    former && person.position ? `${former}; now ${person.position}` : (former ?? person.position);
+  const role = [position, company ? person.company : ""].filter(Boolean).join(", ");
   return `- ${person.name}${role ? ` — ${role}` : ""}${date ? ` (connected ${monthYear(person.connected)})` : ""}`;
 }
 
@@ -274,7 +289,10 @@ function build() {
       people: listed.filter(
         (person) =>
           keys.has(organizationKey(person.company)) ||
-          (sector.position?.test(person.position) ?? false),
+          (sector.position?.test(person.position) ?? false) ||
+          FORMER_SERVICE.some(
+            (former) => former.sector === sector.label && former.name === person.name,
+          ),
       ),
     };
   });
@@ -323,7 +341,7 @@ export function renderNetwork(): string {
     `- Total connections: ${count(n.total)}`,
     `- Listed by name below: ${count(n.listed)}`,
     `- Organizations represented: ${count(n.organizations.length)}`,
-    `- In government, the military or intelligence: ${count(total(government))}`,
+    `- In government, the military or intelligence, now or formerly: ${count(total(government))}`,
     `- At defense, aerospace and government contractors: ${count(total(contractors))}`,
     `- At stealth startups: ${count(n.stealth.length)}`,
     `- Freelance or self-employed: ${count(n.independent.length)}`,
@@ -347,7 +365,7 @@ export function renderNetwork(): string {
     [
       "## Government, military and intelligence connections",
       "",
-      `${count(total(government))} connections work in government, the armed forces or an intelligence agency, and ${count(total(contractors))} more at defense, aerospace and government contractors. Each is shown with the employer and position they listed themselves at the time of the export. The export records only a current employer, so earlier government or military service appears only where someone wrote it into their name or title.`,
+      `${count(total(government))} connections work in, or formerly served in, government, the armed forces or an intelligence agency, and ${count(total(contractors))} more work at defense, aerospace and government contractors. Each is shown with the employer and position they listed themselves at the time of the export. Earlier service is marked "Former" where it is known; the export itself records only a current employer.`,
     ].join("\n"),
     ...n.publicSector
       .filter((sector) => sector.people.length > 0)
