@@ -210,6 +210,11 @@ const FORMER_SERVICE: { name: string; sector: string; note: string }[] = [
     sector: "United States intelligence community",
     note: "Former Director of AI for the CIA",
   },
+  {
+    name: "Rusty Byrne",
+    sector: "United States intelligence community",
+    note: "Former CIA CTO and Deputy CTO",
+  },
 ];
 
 interface Group {
@@ -365,7 +370,7 @@ export function renderNetwork(): string {
     [
       "## Government, military and intelligence connections",
       "",
-      `${count(total(government))} connections work in, or formerly served in, government, the armed forces or an intelligence agency, and ${count(total(contractors))} more work at defense, aerospace and government contractors. Each is shown with the employer and position they listed themselves at the time of the export. Earlier service is marked "Former" where it is known; the export itself records only a current employer.`,
+      `${count(total(government))} connections work in, or formerly served in, government, the armed forces or an intelligence agency, and ${count(total(contractors))} work at defense, aerospace and government contractors; someone with earlier service who now works at a contractor appears under both. Each is shown with the employer and position they listed themselves at the time of the export. Earlier service is marked "Former" where it is known; the export itself records only a current employer.`,
     ].join("\n"),
     ...n.publicSector
       .filter((sector) => sector.people.length > 0)
